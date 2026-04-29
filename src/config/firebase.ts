@@ -2,14 +2,14 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Replace with your Firebase config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCLoDz-OwPfYexTIQ-9qGenygouZUmaTdA",
+  authDomain: "shamyra-web.firebaseapp.com",
+  projectId: "shamyra-web",
+  storageBucket: "shamyra-web.firebasestorage.app",
+  messagingSenderId: "909680715029",
+  appId: "1:909680715029:web:c93a39abb2e917b1a9f51c",
+  measurementId: "G-WRPNS5PCPK"
 };
 
 // Initialize Firebase

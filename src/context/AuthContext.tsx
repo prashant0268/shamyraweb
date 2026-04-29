@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   User
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -60,11 +61,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return signOut(auth);
   };
 
+  const resetPassword = async (email: string) => {
+    return sendPasswordResetEmail(auth, email, {
+      url: 'https://kindflames.com/login',
+      handleCodeInApp: false
+    });
+  };
+
   const value: AuthContextType = {
     user,
     login,
     signup,
     logout,
+    resetPassword,
     loading
   };
 

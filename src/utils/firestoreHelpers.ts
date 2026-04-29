@@ -53,7 +53,9 @@ export const createOrder = async (userId: string, orderData: OrderData): Promise
       status: 'pending' as const,
       createdAt: serverTimestamp(),
       shippingAddress: orderData.shippingAddress || null,
-      paymentMethod: orderData.paymentMethod || null
+      paymentMethod: orderData.paymentMethod || null,
+      paymentId: orderData.paymentId || null,
+      paymentStatus: orderData.paymentStatus || null
     };
 
     const docRef = await addDoc(ordersRef, order);

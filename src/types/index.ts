@@ -43,6 +43,8 @@ export interface Order {
   };
   shippingAddress?: ShippingAddress;
   paymentMethod?: string;
+  paymentId?: string;
+  paymentStatus?: string;
 }
 
 export interface OrderData {
@@ -50,6 +52,8 @@ export interface OrderData {
   total: number;
   shippingAddress?: ShippingAddress;
   paymentMethod?: string;
+  paymentId?: string;
+  paymentStatus?: string;
 }
 
 // Auth types
@@ -70,6 +74,7 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<any>;
   signup: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 export interface CartContextType {
