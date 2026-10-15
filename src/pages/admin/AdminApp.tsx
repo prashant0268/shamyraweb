@@ -26,7 +26,7 @@ export default function AdminApp() {
       <div className="wrap py-6">
         <Routes>
           <Route path="*" element={<AdminOverview />} />
-          <Route path="/admin//admin" element={<AdminOverview />} />
+          <Route path="/admin" element={<AdminOverview />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/orders/:id" element={<AdminOrders />} />
           <Route path="/admin/products" element={<AdminProducts />} />
