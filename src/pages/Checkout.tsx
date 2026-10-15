@@ -47,7 +47,7 @@ export default function Checkout() {
     const t = setTimeout(() => {
       quoteCart({ items, shippingAddress: { ...addr, zipCode: addr.zipCode || '00000', fullName: addr.fullName || 'x', address: addr.address || 'x', city: addr.city || 'x' }, discountCode: applied, shippingMethod: method, gift })
         .then((p) => { setPricing(p); setQuoteError(''); })
-        .catch((e) => { setQuoteError(errorMessage(e)); if (applied) setApplied(null); });
+        .catch((e) => { const code = (e as { code?: string }).code || ''; const unreachable = /internal|unavailable|not-found|deadline/.test(code) && !applied; setQuoteError(unreachable ? 'Checkout is temporarily unavailable — our pricing service did not respond. Please try again in a few minutes or email hello@kindflames.com.' : errorMessage(e)); if (applied) setApplied(null); });
     }, 350);
     return () => clearTimeout(t);
   }, [items, addr.state, addr.zipCode, applied, method, gift.wrap]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -153,7 +153,7 @@ export default function Checkout() {
           <h2 className="text-xl">Order summary</h2>
           <div className="space-y-3">{hydrated.map((l) => <div key={l.productId + l.variantId} className="flex items-center gap-3 text-sm"><div className="h-12 w-12 flex-none overflow-hidden rounded-md bg-surface-2"><ProductImage product={l.product} size={400} className="h-full w-full" /></div><div className="min-w-0 flex-1"><div className="truncate font-semibold">{l.product.name}</div><div className="text-xs text-muted">{l.variant.label} × {l.quantity}{l.bundle ? ' · spa set' : ''}</div></div><span className="num">{money(l.variant.price * l.quantity)}</span></div>)}</div>
           <form onSubmit={applyCode} className="flex gap-2"><input id="co-code" className="input" placeholder="Discount code" value={code} onChange={(e) => setCode(e.target.value)} aria-label="Discount code" /><Button type="submit" variant="ghost" size="sm">Apply</Button></form>
-          {quoteError && <Alert tone="warn">{quoteError}</Alert>}
+          {quoteError && <Alert tone={/unavailable/.test(quoteError) ? 'bad' : 'warn'}>{quoteError}</Alert>}
           {pricing ? (
             <div className="space-y-1">
               <Row l="Subtotal" v={money(pricing.subtotal)} />
@@ -164,7 +164,7 @@ export default function Checkout() {
               <Row l={`Tax${pricing.taxRate ? ` (${addr.state} ${(pricing.taxRate * 100).toFixed(3).replace(/0+$/, '')}%)` : ''}`} v={money(pricing.tax)} />
               <Row l="Total" v={money(pricing.total)} strong />
             </div>
-          ) : <p className="text-sm text-muted">Calculating totals…</p>}
+          ) : !quoteError ? <p className="text-sm text-muted">Calculating totals…</p> : null}
         </aside>
       </div>
     </div>

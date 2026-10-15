@@ -9,13 +9,15 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const Stripe = require("stripe");
 const { Client, Environment, OrdersController, PaymentsController } = require("@paypal/paypal-server-sdk");
 const CATALOG = require("./catalog.json");
 
-admin.initializeApp();
-const db = admin.firestore();
+initializeApp();
+const db = getFirestore();
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 
 /* ----------------------------- configuration ----------------------------- */
@@ -174,7 +176,7 @@ async function createPendingOrder({ uid, email, pricing, shippingAddress, gift, 
     shipping: pricing.shipping, tax: pricing.tax, taxRate: pricing.taxRate, total: pricing.total, currency: "usd",
     shippingAddress, gift: { isGift: !!gift?.isGift, wrap: !!gift?.wrap, message: String(gift?.message || "").slice(0, 300) },
     paymentMethod, paymentStatus: "pending", status: "pending", origin: origin || "",
-    tracking: null, createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp(), paidAt: null,
+    tracking: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), paidAt: null,
   };
   await ref.set(order);
   return { id: ref.id, ...order };
@@ -188,7 +190,7 @@ async function markOrderPaid(orderId, payment) {
     if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
     const order = snap.data();
     if (order.paymentStatus === "paid") return { already: true, order: { id: snap.id, ...order } };
-    tx.update(ref, { paymentStatus: "paid", status: "paid", paidAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp(), payment: payment || {} });
+    tx.update(ref, { paymentStatus: "paid", status: "paid", paidAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), payment: payment || {} });
     return { already: false, order: { id: snap.id, ...order, paymentStatus: "paid", status: "paid" } };
   });
   if (result.already) return result.order;
@@ -201,12 +203,12 @@ async function markOrderPaid(orderId, payment) {
         const ps = await tx.get(pref);
         if (!ps.exists) return;
         const variants = (ps.data().variants || []).map((v) => v.id === item.variantId && typeof v.stock === "number" ? { ...v, stock: Math.max(0, v.stock - item.quantity) } : v);
-        tx.update(pref, { variants, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        tx.update(pref, { variants, updatedAt: FieldValue.serverTimestamp() });
       });
     } catch (e) { console.error("stock update failed", item.productId, e.message); }
   }
   if (result.order.discount?.code) {
-    await db.doc(`discounts/${result.order.discount.code}`).set({ usageCount: admin.firestore.FieldValue.increment(1) }, { merge: true }).catch(() => {});
+    await db.doc(`discounts/${result.order.discount.code}`).set({ usageCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
   }
   await Promise.all([sendOrderConfirmation(result.order), sendOwnerNewOrder(result.order)]).catch((e) => console.error("email failed", e.message));
   return result.order;
@@ -359,8 +361,8 @@ exports.ensureAdmin = onCall({ cors: true }, async (request) => {
   const should = !!email && ADMIN_EMAILS.includes(email);
   const has = request.auth.token.admin === true;
   if (should && !has) {
-    await admin.auth().setCustomUserClaims(uid, { admin: true });
-    await db.doc(`users/${uid}`).set({ role: "admin", email, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    await getAuth().setCustomUserClaims(uid, { admin: true });
+    await db.doc(`users/${uid}`).set({ role: "admin", email, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   }
   return { admin: should || has, refreshed: should && !has };
 });
@@ -373,7 +375,7 @@ exports.updateOrderStatus = onCall({ cors: true, secrets: MAIL_SECRETS }, async 
   const ref = db.doc(`orders/${orderId}`);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
-  const update = { status, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+  const update = { status, updatedAt: FieldValue.serverTimestamp() };
   if (tracking) update.tracking = { carrier: String(tracking.carrier || "").slice(0, 40), number: String(tracking.number || "").slice(0, 60), url: trackingUrl(tracking) };
   if (typeof internalNotes === "string") update.internalNotes = internalNotes.slice(0, 2000);
   await ref.update(update);
@@ -397,7 +399,7 @@ exports.refundOrder = onCall({ cors: true, secrets: [...STRIPE_SECRETS, ...PAYPA
   } else {
     throw new HttpsError("failed-precondition", "No refundable payment on this order.");
   }
-  await ref.update({ status: "refunded", paymentStatus: "refunded", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  await ref.update({ status: "refunded", paymentStatus: "refunded", updatedAt: FieldValue.serverTimestamp() });
   return { ok: true };
 });
 
@@ -421,7 +423,7 @@ exports.submitQuote = onCall({ cors: true, secrets: MAIL_SECRETS }, async (reque
     name: s(d.name), company: s(d.company), email: s(d.email).toLowerCase(), phone: s(d.phone, 40), quantity: Math.max(1, parseInt(d.quantity, 10) || 25),
     budget: s(d.budget, 40), neededBy: s(d.neededBy, 40), product: s(d.product), customization: Array.isArray(d.customization) ? d.customization.map((c) => s(c, 40)).slice(0, 10) : [],
     shippingMode: s(d.shippingMode, 40), notes: s(d.notes, 2000), status: "new", userId: request.auth?.uid || null,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
   };
   if (!quote.name || !quote.email || !quote.company) throw new HttpsError("invalid-argument", "Name, company and email are required.");
   const ref = await db.collection("quotes").add(quote);
@@ -447,7 +449,7 @@ exports.createInvoice = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (r
   const invoice = await stripe.invoices.create({ customer: customer.id, collection_method: "send_invoice", days_until_due: Math.max(1, parseInt(daysUntilDue, 10) || 30), description: memo ? String(memo).slice(0, 500) : `Kind Flames corporate order for ${q.company}`, metadata: { quoteId } });
   const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
   await stripe.invoices.sendInvoice(finalized.id);
-  await qsnap.ref.update({ status: "invoiced", stripeInvoiceId: finalized.id, invoiceUrl: finalized.hosted_invoice_url, invoiceTotal: finalized.total / 100, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  await qsnap.ref.update({ status: "invoiced", stripeInvoiceId: finalized.id, invoiceUrl: finalized.hosted_invoice_url, invoiceTotal: finalized.total / 100, updatedAt: FieldValue.serverTimestamp() });
   return { ok: true, url: finalized.hosted_invoice_url, total: finalized.total / 100 };
 });
 
@@ -460,7 +462,7 @@ async function sendMail({ to, subject, html, text }) {
     return;
   }
   // Trigger Email extension format (firestore-send-email). Queue even when no sender is installed, so nothing is lost.
-  await db.collection("mail").add({ to, from: FROM_EMAIL, message: { subject, html, text: text || "" }, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  await db.collection("mail").add({ to, from: FROM_EMAIL, message: { subject, html, text: text || "" }, createdAt: FieldValue.serverTimestamp() });
 }
 const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function wrapEmail(body) {

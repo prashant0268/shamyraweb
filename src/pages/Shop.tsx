@@ -44,7 +44,8 @@ export default function Shop() {
         {CATS.map((c) => <Link key={c.key} to={c.key === 'all' ? '/shop' : `/shop/${c.key}`} className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${cat === c.key ? 'border-pine bg-pine text-pine-ink' : 'border-line bg-surface hover:bg-surface-2'}`}>{c.label}</Link>)}
       </div>
       <div className="grid gap-6 md:grid-cols-[220px_1fr]">
-        <aside className="flex gap-6 overflow-x-auto pb-2 text-sm md:flex-col md:overflow-visible">
+        <div>
+          <details className="card mb-4 md:hidden"><summary className="cursor-pointer px-4 py-2 text-sm font-bold">Filters &amp; sort{family || max || sort !== 'featured' ? ' · active' : ''}</summary><div className="grid grid-cols-2 gap-4 px-4 pb-4 text-sm">
           <div className="min-w-44">
             <div className="mb-2 font-bold">Scent family</div>
             <label className="flex items-center gap-2 py-0.5"><input type="radio" name="family" checked={!family} onChange={() => set('family', '')} /> Any</label>
@@ -59,7 +60,24 @@ export default function Shop() {
             <div className="mb-2 font-bold">Sort</div>
             <select value={sort} onChange={(e) => set('sort', e.target.value === 'featured' ? '' : e.target.value)} className="input text-sm" aria-label="Sort"><option value="featured">Featured</option><option value="new">Newest</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select>
           </div>
-        </aside>
+          </div></details>
+          <aside className="hidden flex-col gap-6 text-sm md:flex">
+          <div className="min-w-44">
+            <div className="mb-2 font-bold">Scent family</div>
+            <label className="flex items-center gap-2 py-0.5"><input type="radio" name="family" checked={!family} onChange={() => set('family', '')} /> Any</label>
+            {families.map((f) => <label key={f} className="flex items-center gap-2 py-0.5"><input type="radio" name="family" checked={family === f} onChange={() => set('family', f)} /> {f}</label>)}
+          </div>
+          <div className="min-w-44">
+            <div className="mb-2 font-bold">Max price</div>
+            <input type="range" min={10} max={70} step={5} value={max || 70} onChange={(e) => set('max', Number(e.target.value) >= 70 ? '' : e.target.value)} className="w-full" aria-label="Maximum price" />
+            <div className="text-xs text-muted">{max ? `Up to $${max}` : 'Any price'}</div>
+          </div>
+          <div className="min-w-44">
+            <div className="mb-2 font-bold">Sort</div>
+            <select value={sort} onChange={(e) => set('sort', e.target.value === 'featured' ? '' : e.target.value)} className="input text-sm" aria-label="Sort"><option value="featured">Featured</option><option value="new">Newest</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select>
+          </div>
+          </aside>
+        </div>
         <div>
           {!loading && list.length === 0 ? (
             <div className="py-16 text-center text-muted">Nothing matches. <Link to="/shop" className="text-pine underline">Clear filters</Link></div>

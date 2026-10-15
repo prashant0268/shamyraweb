@@ -29,7 +29,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
       <div className="wrap flex h-16 items-center gap-4">
         <button className="rounded-lg p-2 hover:bg-surface-2 md:hidden" aria-label="Menu" onClick={() => setMenu(true)}><Menu size={22} /></button>
-        <Link to="/" className="flex items-center gap-2 font-display text-2xl font-bold tracking-tight">
+        <Link to="/" className="flex items-center gap-2 whitespace-nowrap font-display text-xl font-bold tracking-tight sm:text-2xl">
           <img src="/img/logo-512.png" alt="" width="36" height="36" className="h-9 w-9 object-contain" />
           <span>Kind Flames</span>
         </Link>

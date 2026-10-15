@@ -59,7 +59,7 @@ export default function ProductDetail() {
     <div className="wrap py-6">
       <nav className="mb-4 text-sm text-muted"><Link to="/shop" className="hover:underline">Shop</Link> / <Link to={`/shop/${product.category}`} className="hover:underline">{CATEGORY_LABELS[product.category]}</Link> / {product.name}</nav>
       <div className="grid gap-8 md:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl bg-surface-2"><ProductImage product={product} size={800} eager className="aspect-square w-full" /></div>
+        <div className="self-start overflow-hidden rounded-2xl bg-surface-2"><ProductImage product={product} size={800} eager className="aspect-square w-full" /></div>
         <div className="flex flex-col gap-4">
           <div className="eyebrow">{CATEGORY_LABELS[product.category]} · {product.family} family</div>
           <h1 className="text-3xl sm:text-4xl">{product.name}</h1>
