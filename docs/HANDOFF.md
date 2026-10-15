@@ -12,7 +12,7 @@
 4. **Seed the catalog:** Admin → Products → “Import default catalog to Firestore”. Until you do, the store serves the built-in catalog (read-only).
 5. **Stripe (optional, when ready):** activate the Stripe account, set the live secret in Secret Manager (`firebase functions:secrets:set STRIPE_SECRET_KEY`), add `VITE_STRIPE_PUBLIC_KEY_LIVE` is NOT needed (we use Stripe Checkout, server-side only). Then Admin → Settings → “Card payments enabled”.
    - Webhook (recommended): create an endpoint in Stripe for `checkout.session.completed` → `https://us-central1-shamyra-web.cloudfunctions.net/stripeWebhook`, store its signing secret as `STRIPE_WEBHOOK_SECRET`, set `ENABLE_STRIPE_WEBHOOK=true` in `functions/.env`, redeploy functions. Without it, orders are still verified server-side when the customer lands on the confirmation page.
-6. **Transactional email:** emails are queued in Firestore `mail/` (Trigger Email extension format). Either install the “Trigger Email from Firestore” extension with your SMTP, or create a Resend account, `firebase functions:secrets:set RESEND_API_KEY`, set `ENABLE_RESEND=true`, verify the `kindflames.com` sending domain, redeploy.
+6. ~~Transactional email~~ **Done 2026-10-15** — Resend enabled (`ENABLE_RESEND=true`, domain kindflames.com verified). Emails send from orders@kindflames.com, reply-to hello@kindflames.com.
 7. **Discount code:** create `WELCOME10` (10%, first order only) in Admin → Discounts; the homepage newsletter promises it.
 8. **PayPal live:** already configured via secrets `PAYPAL_*` and `PAYPAL_MODE=live`. Sandbox is used automatically on localhost.
 
