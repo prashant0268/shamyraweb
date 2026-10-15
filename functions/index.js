@@ -51,6 +51,22 @@ const DEFAULT_SETTINGS = {
   announcement: { text: "Free US shipping on orders over $60", visible: true },
 };
 
+async function getProduct(id) {
+  const snap = await db.doc(`products/${id}`).get();
+  if (snap.exists) return { id: snap.id, ...snap.data() };
+  const local = CATALOG.find((p) => p.id === id);
+  return local ? { ...local, _fallback: true } : null;
+}
+const pricingDeps = {
+  getProduct,
+  getDiscount: async (code) => { const snap = await db.doc(`discounts/${code}`).get(); return snap.exists ? snap.data() : null; },
+  hasPriorOrders: async (uid) => !(await db.collection("orders").where("userId", "==", uid).where("status", "in", ["paid", "fulfilled", "shipped", "delivered"]).limit(1).get()).empty,
+};
+async function priceCart(input, settings, uid) {
+  try { return await pricePure(input, settings, uid, pricingDeps); }
+  catch (e) { if (e instanceof PricingError) throw new HttpsError(e.code, e.message); throw e; }
+}
+
 async function getSettings() {
   const snap = await db.doc("settings/store").get();
   return { ...DEFAULT_SETTINGS, ...(snap.exists ? snap.data() : {}) };

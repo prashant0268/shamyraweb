@@ -28,3 +28,8 @@
 - `node scripts/optimize-images.mjs` regenerates WebP product images from `src/assets/images`.
 - Catalog seed: `src/data/catalog.json` (copied to `functions/catalog.json` on deploy as the pricing fallback).
 - Branch `claude/cranky-colden` has everything; `main` on GitHub is behind. The main checkout at `~/Projects/shamyraweb` has stale uncommitted files — run `git checkout -- . && git clean -fd src functions && git pull` there after merging.
+
+## Tests
+- `npm test` — 20 unit tests for server pricing (discounts, bundles, tax, shipping, stock).
+- `npm run test:emulator` — same scenarios through the real Cloud Functions runtime + Firestore emulator (needs Java).
+- Your global `firebase-tools` is 14.5; the functions emulator needs 15.x for firebase-functions v7 (`npm i -g firebase-tools@latest`). Deploys work on either.

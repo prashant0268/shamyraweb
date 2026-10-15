@@ -9,12 +9,6 @@ const cents = (n) => Math.round(n * 100);
 const BODY_CATEGORIES = ["scrub", "lotion", "salt"];
 
 /* -------------------------------- catalog -------------------------------- */
-async function getProduct(id) {
-  const snap = await db.doc(`products/${id}`).get();
-  if (snap.exists) return { id: snap.id, ...snap.data() };
-  const local = CATALOG.find((p) => p.id === id);
-  return local ? { ...local, _fallback: true } : null;
-}
 
 /**
  * Validates cart items and prices them.
