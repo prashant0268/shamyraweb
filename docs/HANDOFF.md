@@ -27,7 +27,8 @@
 - `node scripts/smoke.mjs http://127.0.0.1:4173 ./shots desktop|mobile` runs a headless Chrome smoke test against `vite preview --host 127.0.0.1 --port 4173`.
 - `node scripts/optimize-images.mjs` regenerates WebP product images from `src/assets/images`.
 - Catalog seed: `src/data/catalog.json` (copied to `functions/catalog.json` on deploy as the pricing fallback).
-- Branch `claude/cranky-colden` has everything; `main` on GitHub is behind. The main checkout at `~/Projects/shamyraweb` has stale uncommitted files — run `git checkout -- . && git clean -fd src functions && git pull` there after merging.
+- Branch `claude/cranky-colden` == GitHub `main`; the main checkout at `~/Projects/shamyraweb` is kept in sync with `git pull`.
+- Test records: delete quote requests from Admin → Corporate quotes (Delete link under each row) and unpaid/cancelled orders from the order detail page ("Delete unpaid order"). Paid orders can only be refunded or cancelled, never deleted.
 
 ## Tests
 - `npm test` — 20 unit tests for server pricing (discounts, bundles, tax, shipping, stock).
