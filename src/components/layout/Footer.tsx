@@ -107,7 +107,7 @@ const Footer = () => {
           <FooterSection>
             <LogoSection>
               <Flame size={28} />
-              <LogoText>Shamyra</LogoText>
+              <LogoText>Kind Flames</LogoText>
             </LogoSection>
             <Description>
               Premium handcrafted candles for every occasion. Light up your space with our unique scents.
@@ -132,15 +132,14 @@ const Footer = () => {
           <FooterSection>
             <SectionTitle>Contact</SectionTitle>
             <ContactList>
-              <li>Email: info@shamyra.com</li>
-              <li>Phone: (555) 123-4567</li>
-              <li>Address: 123 Candle Lane, City</li>
+              <li>Email: info@kindflames.com</li>
+              <li>Phone: (732) 666-8013</li>
             </ContactList>
           </FooterSection>
         </FooterGrid>
 
         <Copyright>
-          <p>&copy; {new Date().getFullYear()} Shamyra. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Kind Flames. All rights reserved.</p>
         </Copyright>
       </FooterContent>
     </FooterContainer>

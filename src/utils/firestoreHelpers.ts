@@ -54,8 +54,9 @@ export const createOrder = async (userId: string, orderData: OrderData): Promise
       createdAt: serverTimestamp(),
       shippingAddress: orderData.shippingAddress || null,
       paymentMethod: orderData.paymentMethod || null,
-      paymentId: orderData.paymentId || null,
-      paymentStatus: orderData.paymentStatus || null
+      paymentStatus: orderData.paymentStatus || 'pending',
+      stripeSessionId: orderData.stripeSessionId || null,
+      paypalOrderId: orderData.paypalOrderId || null
     };
 
     const docRef = await addDoc(ordersRef, order);

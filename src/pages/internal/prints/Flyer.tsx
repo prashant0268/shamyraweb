@@ -3,17 +3,17 @@ import { QRCodeSVG } from 'qrcode.react';
 // Import local images
 import img1 from '../../../assets/images/img1.png';
 import img2 from '../../../assets/images/img2.png';
-import img3 from '../../../assets/images/img3.png';
-import img4 from '../../../assets/images/img4.png';
-import img5 from '../../../assets/images/img5.png';
-import img6 from '../../../assets/images/img6.png';
 import img7 from '../../../assets/images/img7.png';
+import candle1 from '../../../assets/images/candle1.png';
+import candle2 from '../../../assets/images/candle2.png';
+import candle3 from '../../../assets/images/candle3.png';
+import candle4 from '../../../assets/images/candle4.png';
+import candle5 from '../../../assets/images/candle5.png';
 
 const Flyer = () => {
-  const flyerImages = [img1, img2, img3, img4, img5, img6, img7, img1];
+  const flyerImages = [candle3, img1, candle1, img2, candle5, img7, candle2, candle4];
 
   const instagramUrl = 'https://instagram.com/kindflames_by_shamyra';
-  const zellePhone = '7327632078';
 
   return (
     <div className="bg-white min-h-screen p-4 print:p-0" style={{ fontFamily: "'Montserrat', sans-serif" }}>
@@ -76,36 +76,22 @@ const Flyer = () => {
           </div>
         </section>
 
-        {/* QR Codes Section - Compact */}
+        {/* QR Code Section */}
         <section className="py-4 px-6 flex-grow flex flex-col justify-center">
           <h2 className="text-lg font-semibold text-center text-gray-800 mb-3" style={{ fontFamily: "'Cormorant Garamond', serif" }}>Connect & Shop</h2>
-          <div className="flex justify-center gap-20">
+          <div className="flex justify-center">
             {/* Instagram QR Code */}
             <div className="text-center">
               <div className="bg-white p-3 rounded-lg border-2 border-amber-200 inline-block">
                 <QRCodeSVG
                   value={instagramUrl}
-                  size={110}
+                  size={130}
                   level="H"
                   fgColor="#d97706"
                 />
               </div>
-              <p className="mt-2 font-semibold text-gray-800 text-sm">Follow Us</p>
+              <p className="mt-2 font-semibold text-gray-800 text-sm">Follow Us on Instagram</p>
               <p className="text-amber-700 text-xs">@kindflames_by_shamyra</p>
-            </div>
-
-            {/* Zelle QR Code */}
-            <div className="text-center">
-              <div className="bg-white p-3 rounded-lg border-2 border-purple-200 inline-block">
-                <QRCodeSVG
-                  value={`zelle:${zellePhone}`}
-                  size={110}
-                  level="H"
-                  fgColor="#7c3aed"
-                />
-              </div>
-              <p className="mt-2 font-semibold text-gray-800 text-sm">Pay with Zelle</p>
-              <p className="text-purple-700 text-xs">{zellePhone}</p>
             </div>
           </div>
         </section>

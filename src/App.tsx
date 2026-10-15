@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import Navbar from './components/layout/Navbar';
@@ -8,11 +7,13 @@ import Home from './pages/Home';
 import Products from './pages/Products';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AuthAction from './pages/AuthAction';
 import Flyer from './pages/internal/prints/Flyer';
+import Flyer2 from './pages/internal/prints/Flyer2';
+import FontPreview from './pages/internal/FontPreview';
 
 function AppContent() {
   const location = useLocation();
@@ -22,6 +23,8 @@ function AppContent() {
     return (
       <Routes>
         <Route path="/internal/prints/flyer" element={<Flyer />} />
+        <Route path="/internal/prints/flyer2" element={<Flyer2 />} />
+        <Route path="/internal/font-preview" element={<FontPreview />} />
       </Routes>
     );
   }
@@ -35,10 +38,10 @@ function AppContent() {
           <Route path="/products" element={<Products />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-confirmation" element={<OrderConfirmation />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/auth/action" element={<AuthAction />} />
         </Routes>
       </main>
       <Footer />
@@ -50,17 +53,9 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <PayPalScriptProvider options={{
-          clientId: import.meta.env.PROD
-            ? import.meta.env.VITE_PAYPAL_CLIENT_ID_LIVE
-            : import.meta.env.VITE_PAYPAL_CLIENT_ID,
-          currency: 'USD',
-          intent: 'capture'
-        }}>
-          <Router>
-            <AppContent />
-          </Router>
-        </PayPalScriptProvider>
+        <Router>
+          <AppContent />
+        </Router>
       </CartProvider>
     </AuthProvider>
   );

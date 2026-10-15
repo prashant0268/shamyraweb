@@ -4,11 +4,15 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendPasswordResetEmail,
+  signInWithPopup,
+  signInAnonymously,
+  GoogleAuthProvider,
   User
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { AuthContextType, UserProfile } from '../types';
+
+const googleProvider = new GoogleAuthProvider();
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -57,23 +61,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return createUserWithEmailAndPassword(auth, email, password);
   };
 
-  const logout = async () => {
-    return signOut(auth);
+  const loginWithGoogle = async () => {
+    return signInWithPopup(auth, googleProvider);
   };
 
-  const resetPassword = async (email: string) => {
-    return sendPasswordResetEmail(auth, email, {
-      url: 'https://kindflames.com/login',
-      handleCodeInApp: false
-    });
+  const loginAsGuest = async () => {
+    return signInAnonymously(auth);
+  };
+
+  const logout = async () => {
+    return signOut(auth);
   };
 
   const value: AuthContextType = {
     user,
     login,
     signup,
+    loginWithGoogle,
+    loginAsGuest,
     logout,
-    resetPassword,
     loading
   };
 

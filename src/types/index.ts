@@ -8,6 +8,9 @@ export interface Product {
   image: string;
   featured: boolean;
   inStock: boolean;
+  fragrance: string;
+  isNewArrival: boolean;
+  collections: string[];
 }
 
 export interface Category {
@@ -43,8 +46,6 @@ export interface Order {
   };
   shippingAddress?: ShippingAddress;
   paymentMethod?: string;
-  paymentId?: string;
-  paymentStatus?: string;
 }
 
 export interface OrderData {
@@ -52,8 +53,9 @@ export interface OrderData {
   total: number;
   shippingAddress?: ShippingAddress;
   paymentMethod?: string;
-  paymentId?: string;
-  paymentStatus?: string;
+  paymentStatus?: 'pending' | 'completed' | 'failed';
+  stripeSessionId?: string;
+  paypalOrderId?: string;
 }
 
 // Auth types
@@ -73,8 +75,9 @@ export interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<any>;
   signup: (email: string, password: string) => Promise<any>;
+  loginWithGoogle: () => Promise<any>;
+  loginAsGuest: () => Promise<any>;
   logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
 }
 
 export interface CartContextType {

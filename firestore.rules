@@ -17,8 +17,11 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      // Prevent updating or deleting orders after creation
-      allow update, delete: if false;
+      // Allow updates only for payment status (from functions or admin)
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['paymentStatus', 'paidAt', 'stripeSessionId', 'paypalOrderId']);
+      allow delete: if false;
     }
 
     // Products collection - read-only for all users

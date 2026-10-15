@@ -1,5 +1,19 @@
 import { Product, Category } from '../types';
 
+// Import local candle images
+import candle1 from '../assets/images/candle1.png';
+import candle2 from '../assets/images/candle2.png';
+import candle3 from '../assets/images/candle3.png';
+import candle4 from '../assets/images/candle4.png';
+import candle5 from '../assets/images/candle5.png';
+import img1 from '../assets/images/img1.png';
+import img2 from '../assets/images/img2.png';
+import img3 from '../assets/images/img3.png';
+import img4 from '../assets/images/img4.png';
+import img5 from '../assets/images/img5.png';
+import img6 from '../assets/images/img6.png';
+import img7 from '../assets/images/img7.png';
+
 export const categories: Category[] = [
   { id: 'all', name: 'All Candles' },
   { id: 'scented', name: 'Scented' },
@@ -16,9 +30,12 @@ export const products: Product[] = [
     description: 'Soothing lavender scent perfect for relaxation',
     price: 24.99,
     category: 'scented',
-    image: 'https://images.unsplash.com/photo-1602874801006-40d6e5d8c99f?w=400&h=400&fit=crop',
+    image: candle1,
     featured: true,
-    inStock: true
+    inStock: true,
+    fragrance: 'French Lavender',
+    isNewArrival: false,
+    collections: []
   },
   {
     id: 2,
@@ -26,9 +43,12 @@ export const products: Product[] = [
     description: 'Sweet vanilla aroma that fills your space',
     price: 22.99,
     category: 'scented',
-    image: 'https://images.unsplash.com/photo-1602874801100-bc649315c851?w=400&h=400&fit=crop',
+    image: candle2,
     featured: true,
-    inStock: true
+    inStock: true,
+    fragrance: 'Madagascar Vanilla',
+    isNewArrival: true,
+    collections: []
   },
   {
     id: 3,
@@ -36,9 +56,12 @@ export const products: Product[] = [
     description: 'Fresh ocean scent for a calming atmosphere',
     price: 26.99,
     category: 'scented',
-    image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=400&h=400&fit=crop',
+    image: candle3,
     featured: true,
-    inStock: true
+    inStock: true,
+    fragrance: 'Sea Salt & Driftwood',
+    isNewArrival: true,
+    collections: []
   },
   {
     id: 4,
@@ -46,9 +69,12 @@ export const products: Product[] = [
     description: 'Unscented natural soy candle',
     price: 19.99,
     category: 'soy',
-    image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=400&h=400&fit=crop',
+    image: candle4,
     featured: false,
-    inStock: true
+    inStock: true,
+    fragrance: 'Unscented',
+    isNewArrival: false,
+    collections: []
   },
   {
     id: 5,
@@ -56,9 +82,12 @@ export const products: Product[] = [
     description: 'Pure beeswax candle with natural honey scent',
     price: 29.99,
     category: 'beeswax',
-    image: 'https://images.unsplash.com/photo-1602874801100-bc649315c851?w=400&h=400&fit=crop',
+    image: candle5,
     featured: false,
-    inStock: true
+    inStock: true,
+    fragrance: 'Natural Honey',
+    isNewArrival: false,
+    collections: []
   },
   {
     id: 6,
@@ -66,9 +95,12 @@ export const products: Product[] = [
     description: 'Warm cinnamon fragrance for cozy evenings',
     price: 23.99,
     category: 'seasonal',
-    image: 'https://images.unsplash.com/photo-1602874801006-40d6e5d8c99f?w=400&h=400&fit=crop',
+    image: img1,
     featured: true,
-    inStock: true
+    inStock: true,
+    fragrance: 'Cinnamon & Clove',
+    isNewArrival: false,
+    collections: ['christmas']
   },
   {
     id: 7,
@@ -76,9 +108,12 @@ export const products: Product[] = [
     description: 'Delicate rose scent for a romantic ambiance',
     price: 27.99,
     category: 'scented',
-    image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=400&h=400&fit=crop',
+    image: img2,
     featured: false,
-    inStock: true
+    inStock: true,
+    fragrance: 'English Rose',
+    isNewArrival: true,
+    collections: []
   },
   {
     id: 8,
@@ -86,9 +121,12 @@ export const products: Product[] = [
     description: 'Fresh pine scent reminiscent of winter walks',
     price: 25.99,
     category: 'seasonal',
-    image: 'https://images.unsplash.com/photo-1602874801100-bc649315c851?w=400&h=400&fit=crop',
+    image: img3,
     featured: false,
-    inStock: true
+    inStock: true,
+    fragrance: 'Nordic Pine',
+    isNewArrival: false,
+    collections: ['christmas']
   },
   {
     id: 9,
@@ -96,9 +134,12 @@ export const products: Product[] = [
     description: 'Refreshing eucalyptus and mint blend',
     price: 24.99,
     category: 'scented',
-    image: 'https://images.unsplash.com/photo-1602874801006-40d6e5d8c99f?w=400&h=400&fit=crop',
+    image: img4,
     featured: false,
-    inStock: true
+    inStock: true,
+    fragrance: 'Eucalyptus & Spearmint',
+    isNewArrival: true,
+    collections: []
   },
   {
     id: 10,
@@ -106,9 +147,12 @@ export const products: Product[] = [
     description: 'Tropical coconut scent for summer vibes',
     price: 23.99,
     category: 'scented',
-    image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=400&h=400&fit=crop',
+    image: img5,
     featured: false,
-    inStock: true
+    inStock: true,
+    fragrance: 'Toasted Coconut',
+    isNewArrival: false,
+    collections: []
   },
   {
     id: 11,
@@ -116,9 +160,12 @@ export const products: Product[] = [
     description: 'Pure white candle without fragrance',
     price: 18.99,
     category: 'unscented',
-    image: 'https://images.unsplash.com/photo-1602874801100-bc649315c851?w=400&h=400&fit=crop',
+    image: img6,
     featured: false,
-    inStock: true
+    inStock: true,
+    fragrance: 'Unscented',
+    isNewArrival: false,
+    collections: []
   },
   {
     id: 12,
@@ -126,8 +173,11 @@ export const products: Product[] = [
     description: 'Fall favorite with warm pumpkin spice',
     price: 26.99,
     category: 'seasonal',
-    image: 'https://images.unsplash.com/photo-1602874801006-40d6e5d8c99f?w=400&h=400&fit=crop',
+    image: img7,
     featured: false,
-    inStock: true
+    inStock: true,
+    fragrance: 'Pumpkin & Nutmeg',
+    isNewArrival: false,
+    collections: ['christmas']
   }
 ];

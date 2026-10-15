@@ -143,7 +143,7 @@ const Navbar = () => {
         <NavContent>
           <Logo to="/">
             <LogoIcon size={32} />
-            <LogoText>Shamyra</LogoText>
+            <LogoText>Kind Flames</LogoText>
           </Logo>
 
           <NavLinks>
