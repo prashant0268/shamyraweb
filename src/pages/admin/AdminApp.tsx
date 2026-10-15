@@ -22,20 +22,21 @@ export default function AdminApp() {
   if (!user.isAdmin) return <div className="wrap max-w-md py-24 text-center"><h1 className="text-2xl">Not an admin</h1><p className="mt-2 text-sm text-muted">{user.email} isn't on the admin list. Add it to <code>ADMIN_EMAILS</code> in <code>functions/.env</code> and redeploy functions, then sign out and back in.</p><div className="mt-4 flex justify-center gap-2"><Button variant="ghost" onClick={() => logout()}>Sign out</Button><Button to="/">Back to store</Button></div></div>;
   return (
     <div className="min-h-screen bg-bg">
-      <header className="sticky top-0 z-30 border-b border-line bg-surface"><div className="wrap flex h-14 items-center gap-4"><Link to="/admin" className="font-display text-lg font-bold">Kind Flames · Admin</Link><nav className="flex gap-1 overflow-x-auto text-sm">{NAV.map(([to, l]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `whitespace-nowrap rounded-full px-3 py-1.5 font-semibold ${isActive ? 'bg-pine text-pine-ink' : 'hover:bg-surface-2'}`}>{l}</NavLink>)}</nav><div className="flex-1" /><Link to="/" className="text-sm text-muted hover:text-ink">View store →</Link></div></header>
+      <header className="sticky top-0 z-30 border-b border-line bg-surface"><div className="wrap flex h-14 items-center gap-4"><Link to="/admin" className="whitespace-nowrap font-display text-lg font-bold">Kind Flames · Admin</Link><nav className="flex gap-1 overflow-x-auto text-sm">{NAV.map(([to, l]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `whitespace-nowrap rounded-full px-3 py-1.5 font-semibold ${isActive ? 'bg-pine text-pine-ink' : 'hover:bg-surface-2'}`}>{l}</NavLink>)}</nav><div className="flex-1" /><Link to="/" className="text-sm text-muted hover:text-ink">View store →</Link></div></header>
       <div className="wrap py-6">
         <Routes>
-          <Route index element={<AdminOverview />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="orders/:id" element={<AdminOrders />} />
-          <Route path="products" element={<AdminProducts />} />
-          <Route path="products/:id" element={<AdminProducts />} />
-          <Route path="quotes" element={<AdminQuotes />} />
-          <Route path="subscriptions" element={<AdminSubscriptions />} />
-          <Route path="discounts" element={<AdminDiscounts />} />
-          <Route path="reviews" element={<AdminReviews />} />
-          <Route path="newsletter" element={<AdminNewsletter />} />
-          <Route path="settings" element={<AdminSettings />} />
+          <Route path="*" element={<AdminOverview />} />
+          <Route path="/admin//admin" element={<AdminOverview />} />
+          <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/orders/:id" element={<AdminOrders />} />
+          <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/products/:id" element={<AdminProducts />} />
+          <Route path="/admin/quotes" element={<AdminQuotes />} />
+          <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+          <Route path="/admin/discounts" element={<AdminDiscounts />} />
+          <Route path="/admin/reviews" element={<AdminReviews />} />
+          <Route path="/admin/newsletter" element={<AdminNewsletter />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
         </Routes>
       </div>
     </div>
