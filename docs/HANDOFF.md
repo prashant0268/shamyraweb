@@ -2,7 +2,7 @@
 
 ## One-time setup you need to do (I can't do these from the CLI)
 
-1. **Enable billing (Blaze plan) on Firebase project `shamyra-web`.**
+1. ~~Enable billing (Blaze)~~ **Done 2026-10-15.** All 11 Cloud Functions are deployed on Node 22. (Kept for reference:)
    https://console.firebase.google.com/project/shamyra-web/usage/details
    Cloud Functions (checkout pricing, PayPal, Stripe, emails, admin) cannot deploy or run without it. The old functions already stopped responding (HTTP 500) for this reason, so PayPal on the old site was already broken.
    After enabling: `firebase deploy --only functions --project shamyra-web` (or just `npm run deploy`).
