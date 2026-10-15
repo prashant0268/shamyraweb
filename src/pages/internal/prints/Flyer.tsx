@@ -1,14 +1,14 @@
 import { QRCodeSVG } from 'qrcode.react';
 
 // Import local images
-import img1 from '../../../assets/images/img1.png';
-import img2 from '../../../assets/images/img2.png';
-import img7 from '../../../assets/images/img7.png';
-import candle1 from '../../../assets/images/candle1.png';
-import candle2 from '../../../assets/images/candle2.png';
-import candle3 from '../../../assets/images/candle3.png';
-import candle4 from '../../../assets/images/candle4.png';
-import candle5 from '../../../assets/images/candle5.png';
+const img1 = '/img/products/cinnamon-spice-800.webp';
+const img2 = '/img/products/rose-garden-800.webp';
+const img7 = '/img/products/pumpkin-spice-800.webp';
+const candle1 = '/img/products/lavender-dreams-800.webp';
+const candle2 = '/img/products/vanilla-bliss-800.webp';
+const candle3 = '/img/products/ocean-breeze-800.webp';
+const candle4 = '/img/products/pure-soy-natural-800.webp';
+const candle5 = '/img/products/beeswax-classic-800.webp';
 
 const Flyer = () => {
   const flyerImages = [candle3, img1, candle1, img2, candle5, img7, candle2, candle4];

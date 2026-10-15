@@ -4,11 +4,11 @@ import { QRCodeSVG } from "qrcode.react";
 import logo from "../../../assets/images/logo/Color-Logo-Transparent-Background.png";
 
 // Import candle images
-import candle1 from "../../../assets/images/candle1.png";
-import candle2 from "../../../assets/images/candle2.png";
-import candle3 from "../../../assets/images/candle3.png";
-import candle4 from "../../../assets/images/candle4.png";
-import candle5 from "../../../assets/images/candle5.png";
+const candle1 = '/img/products/lavender-dreams-800.webp';
+const candle2 = '/img/products/vanilla-bliss-800.webp';
+const candle3 = '/img/products/ocean-breeze-800.webp';
+const candle4 = '/img/products/pure-soy-natural-800.webp';
+const candle5 = '/img/products/beeswax-classic-800.webp';
 
 const Flyer2 = () => {
   const instagramUrl = "https://instagram.com/kindflames_by_shamyra";

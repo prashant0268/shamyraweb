@@ -35,3 +35,7 @@ firebase-debug.log
 
 # emulator logs
 *-debug.log
+
+# full-resolution originals live in ../shamyraweb-assets (outside git)
+src/assets/images/*.png
+src/assets/pdf/
