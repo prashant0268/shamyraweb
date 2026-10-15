@@ -11,8 +11,8 @@
 3. **Admin access:** sign in on the site with `prashant0268@gmail.com` (Google or email). The `ensureAdmin` function grants the admin claim to emails listed in `functions/.env` → `ADMIN_EMAILS`. Then open `/admin`.
 4. **Seed the catalog:** Admin → Products → “Import default catalog to Firestore”. Until you do, the store serves the built-in catalog (read-only).
 5. **Stripe (optional, when ready):** activate the Stripe account, set the live secret in Secret Manager (`firebase functions:secrets:set STRIPE_SECRET_KEY`), add `VITE_STRIPE_PUBLIC_KEY_LIVE` is NOT needed (we use Stripe Checkout, server-side only). Then Admin → Settings → “Card payments enabled”.
-   - Webhook (recommended): create an endpoint in Stripe for `checkout.session.completed` → `https://us-central1-shamyra-web.cloudfunctions.net/stripeWebhook`, store its signing secret as `STRIPE_WEBHOOK_SECRET`, set `ENABLE_STRIPE_WEBHOOK=true` in `functions/.env`, redeploy functions. Without it, orders are still verified server-side when the customer lands on the confirmation page.
-6. ~~Transactional email~~ **Done 2026-10-15** — Resend enabled (`ENABLE_RESEND=true`, domain kindflames.com verified). Emails send from orders@kindflames.com, reply-to hello@kindflames.com.
+   - Webhook (recommended): create an endpoint in Stripe for `checkout.session.completed` → `https://us-central1-shamyra-web.cloudfunctions.net/stripeWebhook`, store its signing secret as `STRIPE_WEBHOOK_SECRET`, set `"stripeWebhook": true` in `functions/features.json`, redeploy functions. Without it, orders are still verified server-side when the customer lands on the confirmation page.
+6. ~~Transactional email~~ **Done 2026-10-15** — Resend enabled (`functions/features.json` → `"resend": true`, domain kindflames.com verified). Emails send from orders@kindflames.com, reply-to hello@kindflames.com.
 7. **Discount code:** create `WELCOME10` (10%, first order only) in Admin → Discounts; the homepage newsletter promises it.
 8. **PayPal live:** already configured via secrets `PAYPAL_*` and `PAYPAL_MODE=live`. Sandbox is used automatically on localhost.
 

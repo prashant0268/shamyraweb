@@ -28,8 +28,11 @@ const SITE_URL = (ENV.SITE_URL || "https://kindflames.com").replace(/\/$/, "");
 const ADMIN_EMAILS = (ENV.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 const OWNER_EMAIL = ENV.OWNER_EMAIL || ADMIN_EMAILS[0] || "";
 const FROM_EMAIL = ENV.FROM_EMAIL || "Kind Flames <orders@kindflames.com>";
-const ENABLE_RESEND = ENV.ENABLE_RESEND === "true";
-const ENABLE_STRIPE_WEBHOOK = ENV.ENABLE_STRIPE_WEBHOOK === "true";
+// Feature flags that change which secrets a function binds live in features.json (read at both deploy-analysis
+// and runtime). .env values are NOT visible during the CLI's deploy analysis, so they can't gate secret bindings.
+const FEATURES = require("./features.json");
+const ENABLE_RESEND = FEATURES.resend === true;
+const ENABLE_STRIPE_WEBHOOK = FEATURES.stripeWebhook === true;
 const MAIL_SECRETS = ENABLE_RESEND ? ["RESEND_API_KEY"] : [];
 const STRIPE_SECRETS = ["STRIPE_SECRET_KEY", ...MAIL_SECRETS];
 const PAYPAL_SECRETS = ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_CLIENT_ID_LIVE", "PAYPAL_CLIENT_SECRET_LIVE", "PAYPAL_MODE", ...MAIL_SECRETS];
@@ -354,11 +357,12 @@ exports.submitQuote = onCall({ cors: true, secrets: MAIL_SECRETS }, async (reque
   };
   if (!quote.name || !quote.email || !quote.company) throw new HttpsError("invalid-argument", "Name, company and email are required.");
   const ref = await db.collection("quotes").add(quote);
-  await Promise.all([
+  const mail = await Promise.all([
     sendMail({ to: OWNER_EMAIL, subject: `New corporate quote: ${quote.company} (${quote.quantity} units)`, html: `<p><b>${quote.name}</b> at <b>${quote.company}</b> (${quote.email}${quote.phone ? ", " + quote.phone : ""}) requested a quote.</p><ul><li>Quantity: ${quote.quantity}</li><li>Product: ${quote.product}</li><li>Budget/unit: ${quote.budget}</li><li>Needed by: ${quote.neededBy}</li><li>Customization: ${quote.customization.join(", ") || "none"}</li><li>Shipping: ${quote.shippingMode}${quote.recipients.length ? ` · ${quote.recipients.length} recipient addresses attached` : ""}</li></ul><p>${esc(quote.notes)}</p><p><a href="${SITE_URL}/admin/quotes">Open in admin</a></p>` }),
     sendMail({ to: quote.email, subject: "We got your Kind Flames corporate gifting request", html: wrapEmail(`<h2>Thanks, ${esc(quote.name)}.</h2><p>We received your request for <b>${quote.quantity}</b> units for ${esc(quote.company)}. You'll hear from us within one business day with pricing and a mock-up.</p><p>In the meantime, our tiers: 25–49 units 10% off · 50–99 15% off · 100+ 20% off and free design.</p>`) }),
-  ]).catch((e) => console.error("quote mail failed", e.message));
-  return { ok: true, id: ref.id };
+  ]).catch((e) => { console.error("quote mail failed", e.message); return [{ ok: false, reason: e.message }]; });
+  await ref.update({ mailStatus: mail }).catch(() => {});
+  return { ok: true, id: ref.id, mail };
 });
 
 exports.createInvoice = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
@@ -537,15 +541,20 @@ async function sendReviewRequest(order) {
 }
 
 /* --------------------------------- email --------------------------------- */
+/** Sends via Resend when enabled; otherwise queues in Firestore `mail/` (Trigger Email format). Returns a status summary. */
 async function sendMail({ to, subject, html, text }) {
-  if (!to) return;
-  if (ENABLE_RESEND && process.env.RESEND_API_KEY) {
-    const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: FROM_EMAIL, to: [to], reply_to: ENV.REPLY_TO || "hello@kindflames.com", subject, html, text }) });
-    if (!r.ok) console.error("resend error", r.status, await r.text());
-    return;
+  if (!to) return { ok: false, via: "none", reason: "no recipient" };
+  if (ENABLE_RESEND) {
+    if (!process.env.RESEND_API_KEY) { console.error("ENABLE_RESEND is true but RESEND_API_KEY is not bound"); return { ok: false, via: "resend", reason: "secret not bound" }; }
+    try {
+      const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: FROM_EMAIL, to: [to], reply_to: ENV.REPLY_TO || "hello@kindflames.com", subject, html, text }) });
+      const body = await r.text();
+      if (!r.ok) { console.error("resend error", r.status, body); return { ok: false, via: "resend", status: r.status, reason: body.slice(0, 300) }; }
+      return { ok: true, via: "resend", id: (() => { try { return JSON.parse(body).id; } catch { return null; } })() };
+    } catch (e) { console.error("resend fetch failed", e.message); return { ok: false, via: "resend", reason: e.message }; }
   }
-  // Trigger Email extension format (firestore-send-email). Queue even when no sender is installed, so nothing is lost.
   await db.collection("mail").add({ to, from: FROM_EMAIL, message: { subject, html, text: text || "" }, createdAt: FieldValue.serverTimestamp() });
+  return { ok: true, via: "queue" };
 }
 const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function wrapEmail(body) {
