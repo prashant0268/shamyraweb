@@ -27,8 +27,9 @@ export default function Checkout() {
   const [addr, setAddr] = useState<ShippingAddress>({ fullName: user?.displayName || '', address: '', address2: '', city: '', state: 'NJ', zipCode: '', phone: '' });
   const [method, setMethod] = useState<'standard' | 'express'>('standard');
   const [gift, setGift] = useState({ isGift: false, wrap: false, message: '' });
-  const [code, setCode] = useState('');
-  const [applied, setApplied] = useState<string | null>(null);
+  const savedCode = (() => { try { return localStorage.getItem('kf_code') || ''; } catch { return ''; } })();
+  const [code, setCode] = useState(savedCode);
+  const [applied, setApplied] = useState<string | null>(savedCode || null);
   const [pay, setPay] = useState<'paypal' | 'card'>('paypal');
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [quoteError, setQuoteError] = useState('');
@@ -47,7 +48,7 @@ export default function Checkout() {
     const t = setTimeout(() => {
       quoteCart({ items, shippingAddress: { ...addr, zipCode: addr.zipCode || '00000', fullName: addr.fullName || 'x', address: addr.address || 'x', city: addr.city || 'x' }, discountCode: applied, shippingMethod: method, gift })
         .then((p) => { setPricing(p); setQuoteError(''); })
-        .catch((e) => { const code = (e as { code?: string }).code || ''; const unreachable = /internal|unavailable|not-found|deadline/.test(code) && !applied; setQuoteError(unreachable ? 'Checkout is temporarily unavailable — our pricing service did not respond. Please try again in a few minutes or email hello@kindflames.com.' : errorMessage(e)); if (applied) setApplied(null); });
+        .catch((e) => { try { if (applied) localStorage.removeItem('kf_code'); } catch { /* ignore */ } const code = (e as { code?: string }).code || ''; const unreachable = /internal|unavailable|not-found|deadline/.test(code) && !applied; setQuoteError(unreachable ? 'Checkout is temporarily unavailable — our pricing service did not respond. Please try again in a few minutes or email hello@kindflames.com.' : errorMessage(e)); if (applied) setApplied(null); });
     }, 350);
     return () => clearTimeout(t);
   }, [items, addr.state, addr.zipCode, applied, method, gift.wrap]); // eslint-disable-line react-hooks/exhaustive-deps

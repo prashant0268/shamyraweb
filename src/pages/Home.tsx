@@ -101,6 +101,10 @@ export default function Home() {
         </section>
       )}
 
+      <section className="wrap py-10">
+        <div className="card grid items-center gap-6 bg-surface-2 p-6 md:grid-cols-[1fr_auto] md:p-8"><div><div className="eyebrow">Subscription</div><h2 className="mt-1 text-3xl">Candle of the Month</h2><p className="mt-2 max-w-[52ch] text-muted">A new hand-poured scent on your doorstep every month for $24, shipping included. Pause or cancel any time.</p></div><Button size="lg" to="/subscribe">See the plans</Button></div>
+      </section>
+
       <section className="border-y border-line bg-surface">
         <div className="wrap grid gap-6 py-10 sm:grid-cols-2 lg:grid-cols-4">
           {[['🕯', 'Coconut-soy, cotton or wood wick', '45–60 hr burn, ASTM-tested'], ['🧴', 'Full ingredient lists', 'Every bath & body product is INCI-labeled'], ['📦', 'Ships in 1–2 business days', `Free over $${settings.freeShippingThreshold} · leak-proof packing`], ['↩', '30-day happiness guarantee', "Wrong scent? We'll swap it."]].map(([i, t, s]) => (

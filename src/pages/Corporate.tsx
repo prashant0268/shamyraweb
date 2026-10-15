@@ -7,6 +7,18 @@ import { useSeo } from '../lib/seo';
 import { track } from '../lib/analytics';
 import Button from '../components/ui/Button';
 import { Alert, Field, ProductImage } from '../components/ui/Bits';
+import type { Recipient } from '../types';
+
+const HEADERS: Record<string, keyof Recipient> = { name: 'name', recipient: 'name', 'full name': 'name', address: 'address', 'address 1': 'address', street: 'address', 'address 2': 'address2', apt: 'address2', city: 'city', state: 'state', zip: 'zipCode', 'zip code': 'zipCode', postal: 'zipCode', email: 'email', note: 'note', message: 'note' };
+function parseCsv(text: string): { rows: Recipient[]; errors: string[] } {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return { rows: [], errors: ['The file needs a header row and at least one recipient.'] };
+  const split = (l: string) => { const out: string[] = []; let cur = '', q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur); cur = ''; } else cur += ch; } out.push(cur); return out.map((c) => c.trim()); };
+  const head = split(lines[0]!).map((h) => HEADERS[h.toLowerCase()]);
+  const errors: string[] = [];
+  const rows = lines.slice(1).map((l, i) => { const cells = split(l); const r: Partial<Recipient> = {}; head.forEach((k, j) => { if (k && cells[j]) r[k] = cells[j]; }); if (!r.name || !r.address || !r.city || !r.state || !r.zipCode) errors.push(`Row ${i + 2}: missing ${['name', 'address', 'city', 'state', 'zipCode'].filter((k) => !r[k as keyof Recipient]).join(', ')}`); return r as Recipient; }).filter((r) => r.name && r.address && r.city && r.state && r.zipCode);
+  return { rows: rows.slice(0, 500), errors: errors.slice(0, 5) };
+}
 
 const CUSTOM = ['Logo label', 'Custom sleeve', 'Card insert', 'Custom scent'];
 
@@ -17,12 +29,14 @@ export default function Corporate() {
   const toast = useToast();
   const [f, setF] = useState({ name: '', company: '', email: '', phone: '', quantity: 50, budget: '$20–30', neededBy: '', product: 'Pine Forest 8 oz candle', customization: ['Logo label'] as string[], shippingMode: 'One address', notes: '' });
   const [busy, setBusy] = useState(false); const [done, setDone] = useState(false); const [error, setError] = useState('');
+  const [recipients, setRecipients] = useState<Recipient[]>([]); const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const onCsv = (file: File | null) => { if (!file) return; file.text().then((t) => { const { rows, errors } = parseCsv(t); setRecipients(rows); setCsvErrors(errors); if (rows.length) setF((x) => ({ ...x, shippingMode: 'Multiple addresses (list attached)' })); }); };
   const sample = products.find((p) => p.id === 'spa-night-set');
   const hero = products.find((p) => p.id === 'pine-forest');
 
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setBusy(true); setError('');
-    try { await submitQuote(f); setDone(true); track('generate_lead', { value: f.quantity }); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
+    try { await submitQuote({ ...f, recipients }); setDone(true); track('generate_lead', { value: f.quantity }); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
   const toggle = (c: string) => setF({ ...f, customization: f.customization.includes(c) ? f.customization.filter((x) => x !== c) : [...f.customization, c] });
 
@@ -56,7 +70,8 @@ export default function Corporate() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3"><Field label="Quantity"><input id="q-qty" type="number" min={25} className="input" value={f.quantity} onChange={(e) => setF({ ...f, quantity: Number(e.target.value) })} /></Field><Field label="Budget / unit"><select id="q-budget" className="input" value={f.budget} onChange={(e) => setF({ ...f, budget: e.target.value })}>{['$15–20', '$20–30', '$30–50', '$50+'].map((b) => <option key={b}>{b}</option>)}</select></Field><Field label="Needed by"><input id="q-date" type="date" className="input" value={f.neededBy} onChange={(e) => setF({ ...f, neededBy: e.target.value })} /></Field></div>
               <Field label="Product"><select id="q-product" className="input" value={f.product} onChange={(e) => setF({ ...f, product: e.target.value })}>{['Pine Forest 8 oz candle', 'Lavender Dreams 8 oz candle', 'Spa Night Set', 'Cozy Evening Trio', 'Mixed: suggest for us', 'Custom scent'].map((p) => <option key={p}>{p}</option>)}</select></Field>
               <div><div className="label">Customization</div><div className="flex flex-wrap gap-3 text-sm">{CUSTOM.map((c) => <label key={c} className="flex items-center gap-1.5"><input type="checkbox" checked={f.customization.includes(c)} onChange={() => toggle(c)} /> {c}</label>)}</div></div>
-              <Field label="Shipping"><select id="q-ship" className="input" value={f.shippingMode} onChange={(e) => setF({ ...f, shippingMode: e.target.value })}><option>One address</option><option>Multiple addresses (I'll send a list)</option></select></Field>
+              <Field label="Shipping"><select id="q-ship" className="input" value={f.shippingMode} onChange={(e) => setF({ ...f, shippingMode: e.target.value })}><option>One address</option><option>Multiple addresses (I'll send a list)</option><option>Multiple addresses (list attached)</option></select></Field>
+              {f.shippingMode.startsWith('Multiple') && <Field label="Recipient list (CSV, optional now)" hint="Columns: name, address, address 2, city, state, zip, email, note. One row per recipient."><input id="q-csv" type="file" accept=".csv,text/csv" className="text-sm" onChange={(e) => onCsv(e.target.files?.[0] || null)} />{recipients.length > 0 && <p className="mt-1 text-sm text-good">{recipients.length} recipients ready.</p>}{csvErrors.map((er) => <p key={er} className="mt-1 text-xs text-bad">{er}</p>)}</Field>}
               <Field label="Notes"><textarea id="q-notes" className="input" rows={3} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="Holiday client gifts; our brand color is navy." /></Field>
               <Button type="submit" variant="accent" disabled={busy}>{busy ? 'Sending…' : 'Send request'}</Button>
             </form>

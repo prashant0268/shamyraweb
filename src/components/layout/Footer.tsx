@@ -13,7 +13,7 @@ export default function Footer() {
           <div className="font-display text-xl font-bold">Kind Flames</div>
           <p className="mt-2 max-w-xs text-muted">Hand-poured candles and small-batch bath &amp; body, made in New Jersey.</p>
         </div>
-        {col('Shop', [['/shop/candle', 'Candles'], ['/shop/scrub', 'Body Scrubs'], ['/shop/lotion', 'Lotions'], ['/shop/salt', 'Bath Salts'], ['/shop/set', 'Gift Sets'], ['/build-a-set', 'Build a Spa Set']])}
+        {col('Shop', [['/shop/candle', 'Candles'], ['/shop/scrub', 'Body Scrubs'], ['/shop/lotion', 'Lotions'], ['/shop/salt', 'Bath Salts'], ['/shop/set', 'Gift Sets'], ['/build-a-set', 'Build a Spa Set'], ['/subscribe', 'Candle of the Month']])}
         {col('Company', [['/corporate', 'Corporate Gifting'], ['/about', 'About'], ['/contact', 'Contact'], ['/faq', 'FAQ']])}
         {col('Help', [['/shipping-returns', 'Shipping & Returns'], ['/candle-care', 'Candle Care & Safety'], ['/privacy', 'Privacy Policy'], ['/terms', 'Terms of Service']])}
         <div><div className="font-bold">Contact</div><ul className="mt-2 space-y-1.5 text-muted"><li>{settings.contactEmail}</li><li>{settings.contactPhone}</li><li>Mon–Fri 9–5 ET</li></ul></div>

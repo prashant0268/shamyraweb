@@ -33,3 +33,9 @@
 - `npm test` — 20 unit tests for server pricing (discounts, bundles, tax, shipping, stock).
 - `npm run test:emulator` — same scenarios through the real Cloud Functions runtime + Firestore emulator (needs Java).
 - Your global `firebase-tools` is 14.5; the functions emulator needs 15.x for firebase-functions v7 (`npm i -g firebase-tools@latest`). Deploys work on either.
+
+## Subscriptions, inserts, reminders (added later on 2026-10-15)
+- `/subscribe`: Candle of the Month ($24/mo) and Seasonal Spa Box ($69/qtr) via Stripe Billing. Gated by the same "Card payments enabled" switch. Customers manage/pause/cancel through the Stripe customer portal from `/account`.
+- Admin → Subscriptions: "Sync from Stripe", then pick this period's candle/box and "Create shipment orders" (idempotent per billing period; orders show up in Orders to pack).
+- Corporate quote form accepts a recipient CSV (name, address, address 2, city, state, zip, email, note). Admin → Corporate quotes: download it, and "Gift code + inserts" creates a 15% `GIFT-<COMPANY>` code and opens a printable 4×6 insert with a QR to `kindflames.com/?code=…` (the code auto-applies at checkout).
+- Daily 3 pm ET job emails one reminder for bags abandoned at payment (1 h–3 d old). Delivered orders trigger a review-request email. Wishlist hearts on products (synced to the account).

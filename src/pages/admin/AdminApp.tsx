@@ -10,8 +10,9 @@ import AdminDiscounts from './AdminDiscounts';
 import AdminReviews from './AdminReviews';
 import AdminSettings from './AdminSettings';
 import AdminNewsletter from './AdminNewsletter';
+import AdminSubscriptions from './AdminSubscriptions';
 
-const NAV: [string, string][] = [['/admin', 'Overview'], ['/admin/orders', 'Orders'], ['/admin/products', 'Products'], ['/admin/quotes', 'Corporate quotes'], ['/admin/discounts', 'Discounts'], ['/admin/reviews', 'Reviews'], ['/admin/newsletter', 'Newsletter'], ['/admin/settings', 'Settings']];
+const NAV: [string, string][] = [['/admin', 'Overview'], ['/admin/orders', 'Orders'], ['/admin/products', 'Products'], ['/admin/quotes', 'Corporate quotes'], ['/admin/subscriptions', 'Subscriptions'], ['/admin/discounts', 'Discounts'], ['/admin/reviews', 'Reviews'], ['/admin/newsletter', 'Newsletter'], ['/admin/settings', 'Settings']];
 
 export default function AdminApp() {
   useSeo({ title: 'Admin', noindex: true });
@@ -30,6 +31,7 @@ export default function AdminApp() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="products/:id" element={<AdminProducts />} />
           <Route path="quotes" element={<AdminQuotes />} />
+          <Route path="subscriptions" element={<AdminSubscriptions />} />
           <Route path="discounts" element={<AdminDiscounts />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="newsletter" element={<AdminNewsletter />} />

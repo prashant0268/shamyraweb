@@ -49,7 +49,7 @@ export interface StoreSettings {
 
 export interface Discount { code: string; type: 'percent' | 'fixed'; value: number; minSubtotal?: number; active: boolean; expiresAt?: { seconds: number } | null; usageLimit?: number | null; usageCount?: number; firstOrderOnly?: boolean; appliesTo?: 'all' | 'sets'; note?: string }
 export interface Review { id: string; productId: string; userId: string; name: string; rating: number; title?: string; body: string; approved: boolean; createdAt?: { seconds: number } | null }
-export interface Quote { id: string; name: string; company: string; email: string; phone?: string; quantity: number; budget: string; neededBy: string; product: string; customization: string[]; shippingMode: string; notes: string; status: 'new' | 'quoted' | 'invoiced' | 'won' | 'lost'; invoiceUrl?: string; invoiceTotal?: number; createdAt?: { seconds: number } | null }
+export interface Quote { id: string; recipients?: Recipient[]; giftCode?: string; name: string; company: string; email: string; phone?: string; quantity: number; budget: string; neededBy: string; product: string; customization: string[]; shippingMode: string; notes: string; status: 'new' | 'quoted' | 'invoiced' | 'won' | 'lost'; invoiceUrl?: string; invoiceTotal?: number; createdAt?: { seconds: number } | null }
 
 export interface UserProfile { uid: string; email: string | null; displayName: string | null; isAnonymous: boolean; isAdmin: boolean; creationTime?: string }
 
@@ -70,3 +70,7 @@ export interface CartContextType {
   setQuantity: (productId: string, variantId: string, quantity: number) => void;
   clear: () => void; open: () => void; close: () => void;
 }
+
+export interface Plan { id: 'monthly' | 'quarterly'; name: string; amount: number; interval: string; intervalCount: number; description: string }
+export interface Subscription { id: string; stripeSubscriptionId: string; userId: string | null; email?: string | null; plan: 'monthly' | 'quarterly'; status: string; currentPeriodStart?: number | null; currentPeriodEnd?: number | null; cancelAtPeriodEnd?: boolean; amount?: number | null; shippingAddress?: ShippingAddress; preference?: string }
+export interface Recipient { name: string; address: string; address2?: string; city: string; state: string; zipCode: string; email?: string; note?: string }

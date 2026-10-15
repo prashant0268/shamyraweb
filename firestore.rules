@@ -65,6 +65,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Subscriptions are written by Cloud Functions; customers read their own.
+    match /subscriptions/{subId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+
     match /counters/{doc} {
       allow read, write: if false;
     }

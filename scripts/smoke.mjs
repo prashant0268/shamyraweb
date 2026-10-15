@@ -2,7 +2,7 @@
 // Usage: node scripts/smoke.mjs <baseUrl> <outDir> [mobile]
 import { chromium } from 'playwright-core';
 const [base = 'http://127.0.0.1:4173', out = '/tmp/shots', mode = 'desktop'] = process.argv.slice(2);
-const routes = ['/', '/shop', '/shop/body', '/product/lavender-dreams', '/product/brown-sugar-vanilla-scrub', '/build-a-set', '/corporate', '/cart', '/checkout', '/login', '/shipping-returns', '/admin', '/nope'];
+const routes = ['/', '/subscribe', '/subscribe/thanks', '/internal/prints/insert?code=GIFT-TEST&company=Acme', '/shop', '/shop/body', '/product/lavender-dreams', '/product/brown-sugar-vanilla-scrub', '/build-a-set', '/corporate', '/cart', '/checkout', '/login', '/shipping-returns', '/admin', '/nope'];
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const ctx = await browser.newContext({ viewport: mode === 'mobile' ? { width: 390, height: 844 } : { width: 1280, height: 900 }, deviceScaleFactor: 1, isMobile: mode === 'mobile' });
 const page = await ctx.newPage();

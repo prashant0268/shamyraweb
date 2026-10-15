@@ -18,12 +18,14 @@ import AuthAction from './pages/AuthAction';
 import InfoPage from './pages/InfoPage';
 import BuildASet from './pages/BuildASet';
 import Corporate from './pages/Corporate';
+import Subscribe, { SubscribeThanks } from './pages/Subscribe';
 import NotFound from './pages/NotFound';
 
 const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
 const Flyer = lazy(() => import('./pages/internal/prints/Flyer'));
 const Flyer2 = lazy(() => import('./pages/internal/prints/Flyer2'));
 const FontPreview = lazy(() => import('./pages/internal/FontPreview'));
+const GiftInsert = lazy(() => import('./pages/internal/prints/GiftInsert'));
 
 const Loading = () => <div className="wrap py-24 text-center text-muted">Loading…</div>;
 
@@ -36,6 +38,7 @@ function AppRoutes() {
           <Route path="/internal/prints/flyer" element={<Flyer />} />
           <Route path="/internal/prints/flyer2" element={<Flyer2 />} />
           <Route path="/internal/font-preview" element={<FontPreview />} />
+          <Route path="/internal/prints/insert" element={<GiftInsert />} />
         </Routes>
       </Suspense>
     );
@@ -53,6 +56,8 @@ function AppRoutes() {
         <Route path="/product/:slug" element={<ProductDetail />} />
         <Route path="/build-a-set" element={<BuildASet />} />
         <Route path="/corporate" element={<Corporate />} />
+        <Route path="/subscribe" element={<Subscribe />} />
+        <Route path="/subscribe/thanks" element={<SubscribeThanks />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order-confirmation" element={<OrderConfirmation />} />

@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext';
 import { money } from '../lib/format';
 import { useSeo } from '../lib/seo';
 import { track } from '../lib/analytics';
+import { useWishlist } from '../lib/wishlist';
 import ProductCard from '../components/ui/ProductCard';
 import Button from '../components/ui/Button';
 import { Badge, ProductImage, Qty, Stars, Field } from '../components/ui/Bits';
@@ -21,6 +22,7 @@ export default function ProductDetail() {
   const { add } = useCart();
   const { user } = useAuth();
   const toast = useToast();
+  const { has, toggle } = useWishlist();
   const product = bySlug(slug);
   const [variantId, setVariantId] = useState<string>('');
   const [qty, setQty] = useState(1);
@@ -81,6 +83,7 @@ export default function ProductDetail() {
             <span className="num text-2xl font-bold">{money(variant.price * qty)}{variant.compareAt && <s className="ml-2 text-base font-normal text-muted">{money(variant.compareAt * qty)}</s>}</span>
             <Qty value={qty} onChange={(n) => setQty(Math.max(1, Math.min(20, n)))} />
             {soldOut ? <Button variant="ghost" onClick={() => toast("We'll restock soon")}>Sold out</Button> : <Button variant="accent" size="lg" onClick={() => add(product.id, variant.id, qty)}>Add to bag</Button>}
+            <button type="button" aria-pressed={has(product.id)} onClick={() => { toggle(product.id); toast(has(product.id) ? 'Removed from wishlist' : 'Saved to wishlist'); }} className={`rounded-full border border-line px-3 py-2 text-sm font-semibold ${has(product.id) ? 'text-bad' : ''}`}>{has(product.id) ? '♥ Saved' : '♡ Save'}</button>
           </div>
           <p className="text-sm text-muted">{low && <Badge tone="warn" className="mr-2">Only {variant.stock} left</Badge>}Ships in 1–2 business days · Free shipping over $60 · 30-day swap</p>
           <details open className="card"><summary className="cursor-pointer px-4 py-3 font-bold">{isBody ? 'Ingredients (INCI)' : product.category === 'set' ? "What's in the box" : 'Candle care & safety'}</summary><div className="px-4 pb-4 text-sm text-muted">{isBody ? <>{product.ingredients}<br /><br />*Fragrance is phthalate-free. Patch test before first use. External use only. Discontinue if irritation occurs.</> : product.category === 'set' ? product.description : <>Trim the wick to ¼″ before every burn. Let the first burn reach the edge of the jar (2–3 hours) to prevent tunnelling. Never leave a burning candle unattended; keep away from drafts, children and pets. Stop use with ½″ of wax left.</>}</div></details>

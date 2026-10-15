@@ -1,6 +1,6 @@
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../config/firebase';
-import type { CartItem, GiftOptions, Order, Pricing, ShippingAddress } from '../types';
+import type { CartItem, GiftOptions, Order, Plan, Pricing, ShippingAddress, Subscription } from '../types';
 
 const call = <I, O>(name: string) => async (data: I): Promise<O> => {
   const fn = httpsCallable<I, O>(functions, name);
@@ -20,6 +20,13 @@ export const updateOrderStatus = call<{ orderId: string; status: string; trackin
 export const refundOrder = call<{ orderId: string }, { ok: boolean }>('refundOrder');
 export const submitQuote = call<Record<string, unknown>, { ok: boolean; id: string }>('submitQuote');
 export const createInvoice = call<{ quoteId: string; lines: { description: string; unitPrice: number; quantity: number }[]; daysUntilDue?: number; memo?: string }, { ok: boolean; url: string; total: number }>('createInvoice');
+
+export const listPlans = call<Record<string, never>, { plans: Plan[] }>('listPlans');
+export const createSubscriptionCheckout = call<{ plan: string; shippingAddress: ShippingAddress; email: string; preference?: string; origin: string }, { url: string }>('createSubscriptionCheckout');
+export const verifySubscription = call<{ sessionId: string }, { active: boolean; status?: string; subscription?: Subscription }>('verifySubscription');
+export const createPortalSession = call<{ origin: string }, { url: string }>('createPortalSession');
+export const syncSubscriptions = call<Record<string, never>, { synced: number }>('syncSubscriptions');
+export const createSubscriptionShipments = call<{ picks: Record<string, { productId: string; variantId: string }[]> }, { created: number; skipped: number }>('createSubscriptionShipments');
 
 export const errorMessage = (e: unknown, fallback = 'Something went wrong. Please try again.') => {
   const err = e as { message?: string; code?: string };

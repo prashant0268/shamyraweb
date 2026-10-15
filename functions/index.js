@@ -8,6 +8,7 @@
  */
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
@@ -305,6 +306,7 @@ exports.updateOrderStatus = onCall({ cors: true, secrets: MAIL_SECRETS }, async 
   await ref.update(update);
   const order = { id: snap.id, ...snap.data(), ...update };
   if (status === "shipped") await sendShipped(order).catch((e) => console.error(e.message));
+  if (status === "delivered") await sendReviewRequest(order).catch((e) => console.error(e.message));
   return { ok: true };
 });
 
@@ -347,12 +349,13 @@ exports.submitQuote = onCall({ cors: true, secrets: MAIL_SECRETS }, async (reque
     name: s(d.name), company: s(d.company), email: s(d.email).toLowerCase(), phone: s(d.phone, 40), quantity: Math.max(1, parseInt(d.quantity, 10) || 25),
     budget: s(d.budget, 40), neededBy: s(d.neededBy, 40), product: s(d.product), customization: Array.isArray(d.customization) ? d.customization.map((c) => s(c, 40)).slice(0, 10) : [],
     shippingMode: s(d.shippingMode, 40), notes: s(d.notes, 2000), status: "new", userId: request.auth?.uid || null,
+    recipients: Array.isArray(d.recipients) ? d.recipients.slice(0, 500).map((r) => ({ name: s(r.name, 80), address: s(r.address, 120), address2: s(r.address2, 60), city: s(r.city, 60), state: s(r.state, 2).toUpperCase(), zipCode: s(r.zipCode, 12), email: s(r.email, 120), note: s(r.note, 140) })).filter((r) => r.name && r.address && r.city && r.state && r.zipCode) : [],
     createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
   };
   if (!quote.name || !quote.email || !quote.company) throw new HttpsError("invalid-argument", "Name, company and email are required.");
   const ref = await db.collection("quotes").add(quote);
   await Promise.all([
-    sendMail({ to: OWNER_EMAIL, subject: `New corporate quote: ${quote.company} (${quote.quantity} units)`, html: `<p><b>${quote.name}</b> at <b>${quote.company}</b> (${quote.email}${quote.phone ? ", " + quote.phone : ""}) requested a quote.</p><ul><li>Quantity: ${quote.quantity}</li><li>Product: ${quote.product}</li><li>Budget/unit: ${quote.budget}</li><li>Needed by: ${quote.neededBy}</li><li>Customization: ${quote.customization.join(", ") || "none"}</li><li>Shipping: ${quote.shippingMode}</li></ul><p>${esc(quote.notes)}</p><p><a href="${SITE_URL}/admin/quotes">Open in admin</a></p>` }),
+    sendMail({ to: OWNER_EMAIL, subject: `New corporate quote: ${quote.company} (${quote.quantity} units)`, html: `<p><b>${quote.name}</b> at <b>${quote.company}</b> (${quote.email}${quote.phone ? ", " + quote.phone : ""}) requested a quote.</p><ul><li>Quantity: ${quote.quantity}</li><li>Product: ${quote.product}</li><li>Budget/unit: ${quote.budget}</li><li>Needed by: ${quote.neededBy}</li><li>Customization: ${quote.customization.join(", ") || "none"}</li><li>Shipping: ${quote.shippingMode}${quote.recipients.length ? ` · ${quote.recipients.length} recipient addresses attached` : ""}</li></ul><p>${esc(quote.notes)}</p><p><a href="${SITE_URL}/admin/quotes">Open in admin</a></p>` }),
     sendMail({ to: quote.email, subject: "We got your Kind Flames corporate gifting request", html: wrapEmail(`<h2>Thanks, ${esc(quote.name)}.</h2><p>We received your request for <b>${quote.quantity}</b> units for ${esc(quote.company)}. You'll hear from us within one business day with pricing and a mock-up.</p><p>In the meantime, our tiers: 25–49 units 10% off · 50–99 15% off · 100+ 20% off and free design.</p>`) }),
   ]).catch((e) => console.error("quote mail failed", e.message));
   return { ok: true, id: ref.id };
@@ -376,6 +379,162 @@ exports.createInvoice = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (r
   await qsnap.ref.update({ status: "invoiced", stripeInvoiceId: finalized.id, invoiceUrl: finalized.hosted_invoice_url, invoiceTotal: finalized.total / 100, updatedAt: FieldValue.serverTimestamp() });
   return { ok: true, url: finalized.hosted_invoice_url, total: finalized.total / 100 };
 });
+
+
+/* ----------------------------- subscriptions ------------------------------ */
+const PLANS = {
+  monthly: { id: "monthly", name: "Candle of the Month", amount: 2400, interval: "month", intervalCount: 1, description: "One 8 oz candle in a new scent every month, free shipping." },
+  quarterly: { id: "quarterly", name: "Seasonal Spa Box", amount: 6900, interval: "month", intervalCount: 3, description: "A candle, a bath soak and a lotion every season, free shipping." },
+};
+exports.listPlans = onCall({ cors: true }, async () => ({ plans: Object.values(PLANS) }));
+
+exports.createSubscriptionCheckout = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const origin = assertOrigin(data.origin);
+  const plan = PLANS[data.plan];
+  if (!plan) throw new HttpsError("invalid-argument", "Unknown plan.");
+  const settings = await getSettings();
+  if (isProductionOrigin(origin) && !settings.cardPaymentsEnabled) throw new HttpsError("failed-precondition", "Subscriptions open once card payments are enabled.");
+  const shippingAddress = cleanAddress(data.shippingAddress);
+  const email = String(data.email || request.auth.token.email || "").toLowerCase().slice(0, 200);
+  if (!email) throw new HttpsError("invalid-argument", "Email is required.");
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer_email: email,
+    line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: plan.amount, recurring: { interval: plan.interval, interval_count: plan.intervalCount }, product_data: { name: plan.name, description: plan.description } } }],
+    success_url: `${origin}/subscribe/thanks?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/subscribe?cancelled=1`,
+    metadata: { uid, plan: plan.id, shippingAddress: JSON.stringify(shippingAddress), preference: String(data.preference || "").slice(0, 60) },
+    subscription_data: { metadata: { uid, plan: plan.id } },
+  });
+  return { url: session.url };
+});
+
+async function upsertSubscriptionDoc(sub, extra = {}) {
+  const ref = db.doc(`subscriptions/${sub.id}`);
+  const existing = await ref.get();
+  const doc = {
+    stripeSubscriptionId: sub.id, stripeCustomerId: typeof sub.customer === "string" ? sub.customer : sub.customer?.id,
+    status: sub.status, plan: sub.metadata?.plan || existing.data()?.plan || "monthly", userId: sub.metadata?.uid || existing.data()?.userId || null,
+    currentPeriodStart: sub.current_period_start || sub.items?.data?.[0]?.current_period_start || null,
+    currentPeriodEnd: sub.current_period_end || sub.items?.data?.[0]?.current_period_end || null,
+    cancelAtPeriodEnd: !!sub.cancel_at_period_end, amount: sub.items?.data?.[0]?.price?.unit_amount ? sub.items.data[0].price.unit_amount / 100 : null,
+    updatedAt: FieldValue.serverTimestamp(), ...extra,
+  };
+  if (!existing.exists) doc.createdAt = FieldValue.serverTimestamp();
+  await ref.set(doc, { merge: true });
+  return { id: sub.id, ...(existing.exists ? existing.data() : {}), ...doc };
+}
+
+exports.verifySubscription = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
+  const uid = requireAuth(request);
+  const { sessionId } = request.data || {};
+  if (!sessionId) throw new HttpsError("invalid-argument", "Missing session.");
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(String(sessionId), { expand: ["subscription"] });
+  if (session.metadata?.uid !== uid && !request.auth.token.admin) throw new HttpsError("permission-denied", "Not your subscription.");
+  if (session.status !== "complete" || !session.subscription) return { active: false, status: session.status };
+  const sub = session.subscription;
+  const already = (await db.doc(`subscriptions/${sub.id}`).get()).exists;
+  const doc = await upsertSubscriptionDoc(sub, { email: session.customer_details?.email || session.customer_email || null, shippingAddress: JSON.parse(session.metadata.shippingAddress || "{}"), preference: session.metadata.preference || "", userId: uid });
+  if (!already) {
+    const plan = PLANS[doc.plan] || PLANS.monthly;
+    await Promise.all([
+      sendMail({ to: doc.email, subject: `Welcome to ${plan.name}`, html: wrapEmail(`<h2>You're in.</h2><p>Your <b>${plan.name}</b> subscription is active. First box ships within 5 business days; after that, on each renewal.</p><p>Manage, pause or cancel any time from <a href="${SITE_URL}/account">your account</a>.</p>`) }),
+      sendMail({ to: OWNER_EMAIL, subject: `New subscriber: ${plan.name}`, html: wrapEmail(`<p>${esc(doc.email)} subscribed to ${plan.name}. Preference: ${esc(doc.preference || "none")}.</p><p><a href="${SITE_URL}/admin/subscriptions">Open in admin</a></p>`) }),
+    ]).catch((e) => console.error(e.message));
+  }
+  return { active: ["active", "trialing"].includes(sub.status), subscription: publicSub(doc) };
+});
+
+exports.createPortalSession = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
+  const uid = requireAuth(request);
+  const origin = assertOrigin(request.data?.origin);
+  const snap = await db.collection("subscriptions").where("userId", "==", uid).limit(1).get();
+  if (snap.empty) throw new HttpsError("not-found", "No subscription found.");
+  const stripe = getStripe();
+  let configuration;
+  const configs = await stripe.billingPortal.configurations.list({ limit: 1, active: true });
+  if (configs.data.length) configuration = configs.data[0].id;
+  else {
+    const c = await stripe.billingPortal.configurations.create({ business_profile: { headline: "Kind Flames subscriptions" }, features: { customer_update: { enabled: true, allowed_updates: ["email", "address", "shipping"] }, invoice_history: { enabled: true }, payment_method_update: { enabled: true }, subscription_cancel: { enabled: true, mode: "at_period_end" } } });
+    configuration = c.id;
+  }
+  const portal = await stripe.billingPortal.sessions.create({ customer: snap.docs[0].data().stripeCustomerId, return_url: `${origin}/account`, configuration });
+  return { url: portal.url };
+});
+
+exports.syncSubscriptions = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
+  requireAdmin(request);
+  const stripe = getStripe();
+  let n = 0;
+  for await (const sub of stripe.subscriptions.list({ limit: 100, status: "all", expand: ["data.customer"] })) {
+    await upsertSubscriptionDoc(sub, { email: sub.customer?.email || undefined });
+    n++;
+  }
+  return { synced: n };
+});
+
+/** Creates one fulfilment order per active subscription for the current billing period (idempotent). */
+exports.createSubscriptionShipments = onCall({ cors: true, secrets: MAIL_SECRETS }, async (request) => {
+  requireAdmin(request);
+  const { picks } = request.data || {}; // { monthly: [{productId, variantId}], quarterly: [...] }
+  const settings = await getSettings();
+  const subs = await db.collection("subscriptions").where("status", "in", ["active", "trialing"]).get();
+  let created = 0, skipped = 0;
+  for (const d of subs.docs) {
+    const sub = d.data();
+    const periodKey = `${sub.stripeSubscriptionId}:${sub.currentPeriodStart || "na"}`;
+    const dup = await db.collection("orders").where("subscriptionPeriodKey", "==", periodKey).limit(1).get();
+    if (!dup.empty) { skipped++; continue; }
+    const chosen = (picks?.[sub.plan] || []).filter((x) => x?.productId);
+    if (!chosen.length) continue;
+    const lines = [];
+    for (const c of chosen) { const p = await getProduct(c.productId); if (!p) continue; const v = p.variants.find((x) => x.id === c.variantId) || p.variants[0]; lines.push({ productId: p.id, variantId: v.id, name: p.name, variantLabel: v.label, price: v.price, quantity: 1, image: p.images?.[0] || "", lineDiscount: v.price, bundle: null }); }
+    if (!lines.length) continue;
+    const plan = PLANS[sub.plan] || PLANS.monthly;
+    const number = await nextOrderNumber();
+    const ref = db.collection("orders").doc();
+    const order = {
+      number, userId: sub.userId, email: sub.email || "", customerName: sub.shippingAddress?.fullName || sub.email || "Subscriber",
+      items: lines, subtotal: round2(lines.reduce((t, l) => t + l.price, 0)), bundleDiscount: 0, discount: { code: null, amount: 0 }, discountTotal: 0, giftWrap: 0,
+      shipping: { method: "standard", amount: 0 }, tax: 0, taxRate: 0, total: plan.amount / 100, currency: "usd",
+      shippingAddress: sub.shippingAddress || null, gift: { isGift: false, wrap: false, message: "" }, paymentMethod: "subscription", paymentStatus: "paid", status: "paid",
+      subscriptionId: sub.stripeSubscriptionId, subscriptionPeriodKey: periodKey, origin: SITE_URL, tracking: null,
+      createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), paidAt: FieldValue.serverTimestamp(),
+    };
+    await ref.set(order);
+    created++;
+    if (order.email) await sendMail({ to: order.email, subject: `Your ${plan.name} box is being packed`, html: wrapEmail(`<h2>This period's box</h2><p>${lines.map((l) => esc(l.name) + " (" + esc(l.variantLabel) + ")").join(", ")} is on its way to you within 5 business days. Order ${number}.</p>`) }).catch(() => {});
+  }
+  void settings;
+  return { created, skipped };
+});
+function publicSub(s) { const { stripeCustomerId, ...rest } = s; return { ...rest, createdAt: null, updatedAt: null }; }
+
+/* --------------------------- scheduled reminders -------------------------- */
+exports.abandonedCartReminder = onSchedule({ schedule: "every day 15:00", timeZone: "America/New_York", secrets: MAIL_SECRETS }, async () => {
+  const now = Date.now();
+  const snap = await db.collection("orders").where("status", "==", "pending").orderBy("createdAt", "desc").limit(200).get();
+  let sent = 0;
+  for (const d of snap.docs) {
+    const o = d.data();
+    const age = now - (o.createdAt?.toMillis ? o.createdAt.toMillis() : now);
+    if (o.reminderSent || !o.email || age < 3600e3 || age > 3 * 864e5) continue;
+    await sendMail({ to: o.email, subject: "Your Kind Flames bag is waiting", html: wrapEmail(`<h2>Still thinking it over?</h2><p>You left ${o.items.map((i) => esc(i.name)).join(", ")} in your bag. It's saved for you.</p><p><a href="${SITE_URL}/checkout">Finish checking out</a> — free shipping over $60.</p>`) }).catch(() => {});
+    await d.ref.update({ reminderSent: true });
+    sent++;
+  }
+  console.log(`abandoned cart reminders sent: ${sent}`);
+});
+
+async function sendReviewRequest(order) {
+  if (!order.email) return;
+  const links = order.items.map((i) => `<li><a href="${SITE_URL}/product/${esc(i.productId)}#reviews">${esc(i.name)}</a></li>`).join("");
+  return sendMail({ to: order.email, subject: "How was your Kind Flames order?", html: wrapEmail(`<h2>Delivered — how is it?</h2><p>A quick review helps other people pick a scent, and helps us a lot.</p><ul>${links}</ul>`) });
+}
 
 /* --------------------------------- email --------------------------------- */
 async function sendMail({ to, subject, html, text }) {
