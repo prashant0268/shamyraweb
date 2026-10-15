@@ -3,32 +3,70 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users collection - users can only read/write their own data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
 
-    // Carts collection - users can only access their own cart
-    match /carts/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Orders collection - users can only read their own orders
-    match /orders/{orderId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      // Allow updates only for payment status (from functions or admin)
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['paymentStatus', 'paidAt', 'stripeSessionId', 'paypalOrderId']);
-      allow delete: if false;
-    }
-
-    // Products collection - read-only for all users
+    // Public catalog; only admins write.
     match /products/{productId} {
       allow read: if true;
-      // Only admins can write (you can add admin check later)
-      allow write: if false;
+      allow write: if isAdmin();
+    }
+
+    // Store settings: public read (shipping threshold, announcement), admin write.
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Discount codes are validated server-side; clients can read a single code to preview it.
+    match /discounts/{code} {
+      allow get: if true;
+      allow list, write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    match /carts/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Orders are created and updated ONLY by Cloud Functions (Admin SDK).
+    // Customers can read their own; admins can read all and update fulfilment fields.
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, delete: if false;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['status', 'tracking', 'internalNotes', 'updatedAt']);
+    }
+
+    // Reviews: anyone can read approved reviews; signed-in users create; admins moderate.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /newsletter/{email} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Corporate quote requests: created via Cloud Function; admins manage.
+    match /quotes/{quoteId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Outbound mail queue (Trigger Email extension format). Server-only.
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+
+    match /counters/{doc} {
+      allow read, write: if false;
     }
   }
 }

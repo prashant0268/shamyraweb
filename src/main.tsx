@@ -3,13 +3,10 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
 
-const APP_VERSION = '1.0.3';
-console.log(`%cKind Flames v${APP_VERSION}`, 'color: #f59e0b; font-weight: bold; font-size: 14px;');
+export const APP_VERSION = '2.0.0';
+console.log(`%cKind Flames v${APP_VERSION}`, 'color:#C68A1E;font-weight:bold');
 
-const rootElement = document.getElementById('root');
-if (!rootElement) throw new Error('Failed to find the root element');
-
-createRoot(rootElement).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>

@@ -1,5 +1,4 @@
-import { products } from '../../data/products';
-import ProductCard from '../../components/ui/ProductCard';
+import { LOCAL_CATALOG as products } from '../../lib/catalog';
 import backgroundImage from '../../assets/background/background.jpg';
 
 const fontOptions = [
@@ -121,7 +120,7 @@ const FontPreview = () => {
                   <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                     <div className="aspect-square bg-gray-100">
                       <img
-                        src={product.image}
+                        src={product.images[0]}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
@@ -133,11 +132,11 @@ const FontPreview = () => {
                       >
                         {product.name}
                       </h3>
-                      <p className="text-sm text-gray-500 mt-1">{product.fragrance}</p>
+                      <p className="text-sm text-gray-500 mt-1">{product.family}</p>
                       <p className="text-gray-600 text-sm mt-2 line-clamp-2">{product.description}</p>
                       <div className="mt-3 flex justify-between items-center">
                         <span className="text-lg font-bold text-primary-600">
-                          ${product.price.toFixed(2)}
+                          ${(product.variants[0]?.price ?? 0).toFixed(2)}
                         </span>
                         <button className="bg-primary-600 text-white px-4 py-2 rounded text-sm hover:bg-primary-700 transition-colors">
                           Add to Cart

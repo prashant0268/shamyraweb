@@ -1,97 +1,33 @@
-import styled from 'styled-components';
-import { ShoppingCart } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
+import { money } from '../../lib/format';
+import { inStock, minPrice } from '../../lib/catalog';
+import { CATEGORY_LABELS, type Product, type Variant } from '../../types';
+import { Badge, ProductImage, Stars } from './Bits';
 import Button from './Button';
-import { ProductCardProps } from '../../types';
 
-const Card = styled.div`
-  background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: box-shadow 0.3s;
-
-  &:hover {
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const ImageContainer = styled.div`
-  aspect-ratio: 1;
-  overflow: hidden;
-`;
-
-const ProductImage = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
-
-  &:hover {
-    transform: scale(1.05);
-  }
-`;
-
-const CardContent = styled.div`
-  padding: 1rem;
-`;
-
-const ProductName = styled.h3`
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 0.5rem;
-`;
-
-const ProductDescription = styled.p`
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 0.75rem;
-`;
-
-const CardFooter = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const Price = styled.span`
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #dc2626;
-`;
-
-const AddToCartButton = styled(Button)`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const ProductCard = ({ product }: ProductCardProps) => {
-  const { addToCart } = useCart();
-
-  const handleAddToCart = () => {
-    addToCart(product);
-  };
-
+export default function ProductCard({ product }: { product: Product }) {
+  const { add } = useCart();
+  const available = inStock(product);
+  const first = (product.variants.find((v) => typeof v.stock !== 'number' || v.stock > 0) || product.variants[0]) as Variant;
+  const compare = first?.compareAt;
+  const badgeTone = product.badge === 'Sold out' ? 'bad' : product.badge?.startsWith('Save') ? 'good' : product.badge === 'New' ? 'accent' : 'neutral';
   return (
-    <Card>
-      <ImageContainer>
-        <ProductImage src={product.image} alt={product.name} />
-      </ImageContainer>
-      <CardContent>
-        <ProductName>{product.name}</ProductName>
-        <ProductDescription>{product.description}</ProductDescription>
-        <CardFooter>
-          <Price>${product.price}</Price>
-          <AddToCartButton onClick={handleAddToCart} variant="primary">
-            <ShoppingCart size={18} />
-            Add to Cart
-          </AddToCartButton>
-        </CardFooter>
-      </CardContent>
-    </Card>
+    <div className="card flex min-w-0 flex-col overflow-hidden transition hover:shadow-lg">
+      <Link to={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden bg-surface-2">
+        <ProductImage product={product} size={400} className="h-full w-full transition duration-300 hover:scale-105" />
+        {!available ? <Badge tone="bad" className="absolute left-2 top-2">Sold out</Badge> : product.badge ? <Badge tone={badgeTone} className="absolute left-2 top-2">{product.badge}</Badge> : null}
+      </Link>
+      <div className="flex flex-1 flex-col gap-1 p-3 sm:p-4">
+        <div className="eyebrow">{CATEGORY_LABELS[product.category]} · {product.family}</div>
+        <Link to={`/product/${product.slug}`} className="font-display text-lg font-semibold leading-tight hover:underline">{product.name}</Link>
+        {product.tagline && <p className="text-sm text-muted">{product.tagline}</p>}
+        <Stars rating={product.rating} count={product.reviewCount} />
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+          <span className="num font-bold">{product.variants.length > 1 ? 'From ' : ''}{money(minPrice(product))}{compare ? <s className="ml-1 font-normal text-muted">{money(compare)}</s> : null}</span>
+          {available ? <Button size="sm" onClick={() => add(product.id, first.id)}>Add</Button> : <Button size="sm" variant="ghost" to={`/product/${product.slug}`}>Details</Button>}
+        </div>
+      </div>
+    </div>
   );
-};
-
-export default ProductCard;
+}

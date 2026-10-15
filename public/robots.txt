@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /internal
+Disallow: /checkout
+Disallow: /account
+Sitemap: https://kindflames.com/sitemap.xml

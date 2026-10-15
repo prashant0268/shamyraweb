@@ -1,179 +1,63 @@
-import { Link, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { ShoppingCart, User, LogOut, Flame } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Menu, Search, ShoppingBag, User, X } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 
-const Nav = styled.nav`
-  background: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-`;
+const LINKS = [
+  { to: '/shop/candle', label: 'Candles' },
+  { to: '/shop/body', label: 'Bath & Body' },
+  { to: '/shop/set', label: 'Gift Sets' },
+  { to: '/build-a-set', label: 'Build a Set' },
+  { to: '/corporate', label: 'Corporate' },
+];
 
-const NavContainer = styled.div`
-  max-width: 80rem;
-  margin: 0 auto;
-  padding: 0 1rem;
-
-  @media (min-width: 640px) {
-    padding: 0 1.5rem;
-  }
-
-  @media (min-width: 1024px) {
-    padding: 0 2rem;
-  }
-`;
-
-const NavContent = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 4rem;
-`;
-
-const Logo = styled(Link)`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-`;
-
-const LogoIcon = styled(Flame)`
-  color: #dc2626;
-`;
-
-const LogoText = styled.span`
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
-`;
-
-const NavLinks = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-`;
-
-const NavLink = styled(Link)`
-  color: #374151;
-  text-decoration: none;
-  transition: color 0.2s;
-
-  &:hover {
-    color: #dc2626;
-  }
-`;
-
-const CartLink = styled(Link)`
-  position: relative;
-  display: block;
-`;
-
-const CartIcon = styled(ShoppingCart)`
-  color: #374151;
-  transition: color 0.2s;
-
-  ${CartLink}:hover & {
-    color: #dc2626;
-  }
-`;
-
-const CartBadge = styled.span`
-  position: absolute;
-  top: -0.5rem;
-  right: -0.5rem;
-  background-color: #dc2626;
-  color: white;
-  font-size: 0.75rem;
-  border-radius: 9999px;
-  width: 1.25rem;
-  height: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const UserActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
-const IconLink = styled(Link)`
-  color: #374151;
-  transition: color 0.2s;
-
-  &:hover {
-    color: #dc2626;
-  }
-`;
-
-const IconButton = styled.button`
-  background: none;
-  border: none;
-  color: #374151;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s;
-
-  &:hover {
-    color: #dc2626;
-  }
-`;
-
-const Navbar = () => {
-  const { getCartCount } = useCart();
-  const { user, logout } = useAuth();
+export default function Navbar() {
+  const { count, open } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const [menu, setMenu] = useState(false);
+  const [q, setQ] = useState('');
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
+  useEffect(() => { document.body.style.overflow = menu ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [menu]);
+
+  const search = (e: FormEvent) => { e.preventDefault(); if (q.trim()) { navigate(`/shop?q=${encodeURIComponent(q.trim())}`); setMenu(false); } };
+  const link = 'border-b-2 border-transparent py-1 font-medium text-ink hover:text-pine';
+  const active = ({ isActive }: { isActive: boolean }) => `${link} ${isActive ? 'border-honey' : ''}`;
 
   return (
-    <Nav>
-      <NavContainer>
-        <NavContent>
-          <Logo to="/">
-            <LogoIcon size={32} />
-            <LogoText>Kind Flames</LogoText>
-          </Logo>
+    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
+      <div className="wrap flex h-16 items-center gap-4">
+        <button className="rounded-lg p-2 hover:bg-surface-2 md:hidden" aria-label="Menu" onClick={() => setMenu(true)}><Menu size={22} /></button>
+        <Link to="/" className="flex items-center gap-2 font-display text-2xl font-bold tracking-tight">
+          <img src="/img/logo-512.png" alt="" width="36" height="36" className="h-9 w-9 object-contain" />
+          <span>Kind Flames</span>
+        </Link>
+        <nav className="ml-4 hidden items-center gap-6 md:flex">{LINKS.map((l) => <NavLink key={l.to} to={l.to} className={active}>{l.label}</NavLink>)}</nav>
+        <div className="flex-1" />
+        <form onSubmit={search} className="hidden items-center gap-2 rounded-full bg-surface-2 px-3 py-1.5 lg:flex">
+          <Search size={16} className="text-muted" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search lavender, scrub…" aria-label="Search" className="w-40 bg-transparent text-sm outline-none" />
+        </form>
+        <Link to={user && !user.isAnonymous ? '/account' : '/login'} aria-label="Account" className="rounded-lg p-2 hover:bg-surface-2"><User size={22} /></Link>
+        <button onClick={open} aria-label={`Bag, ${count} items`} className="relative rounded-lg p-2 hover:bg-surface-2">
+          <ShoppingBag size={22} />
+          {count > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-honey px-1 text-xs font-bold text-honey-ink">{count}</span>}
+        </button>
+      </div>
 
-          <NavLinks>
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/products">Products</NavLink>
-
-            <CartLink to="/cart">
-              <CartIcon size={24} />
-              {getCartCount() > 0 && (
-                <CartBadge>{getCartCount()}</CartBadge>
-              )}
-            </CartLink>
-
-            {user ? (
-              <UserActions>
-                <IconLink to="/profile">
-                  <User size={24} />
-                </IconLink>
-                <IconButton onClick={handleLogout}>
-                  <LogOut size={24} />
-                </IconButton>
-              </UserActions>
-            ) : (
-              <NavLink to="/login">Login</NavLink>
-            )}
-          </NavLinks>
-        </NavContent>
-      </NavContainer>
-    </Nav>
+      {menu && (
+        <div className="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true">
+          <div className="flex h-full w-[min(320px,85vw)] flex-col gap-1 overflow-auto bg-surface p-5">
+            <div className="mb-2 flex items-center justify-between"><span className="font-display text-xl font-bold">Menu</span><button onClick={() => setMenu(false)} aria-label="Close" className="rounded-lg p-2 hover:bg-surface-2"><X size={22} /></button></div>
+            <form onSubmit={search} className="mb-3 flex items-center gap-2 rounded-full bg-surface-2 px-3 py-2"><Search size={16} className="text-muted" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search" className="w-full bg-transparent text-sm outline-none" /></form>
+            {[{ to: '/shop', label: 'Shop all' }, { to: '/shop/candle', label: 'Candles' }, { to: '/shop/scrub', label: 'Body Scrubs' }, { to: '/shop/lotion', label: 'Lotions' }, { to: '/shop/salt', label: 'Bath Salts' }, { to: '/shop/set', label: 'Gift Sets' }, { to: '/build-a-set', label: 'Build a Spa Set' }, { to: '/corporate', label: 'Corporate Gifting' }, { to: user && !user.isAnonymous ? '/account' : '/login', label: user && !user.isAnonymous ? 'My account' : 'Sign in' }, ...(user?.isAdmin ? [{ to: '/admin', label: 'Admin' }] : [])].map((l) => (
+              <Link key={l.to} to={l.to} onClick={() => setMenu(false)} className="border-b border-line py-3 font-display text-lg">{l.label}</Link>
+            ))}
+          </div>
+          <button className="flex-1 bg-black/40" aria-label="Close menu" onClick={() => setMenu(false)} />
+        </div>
+      )}
+    </header>
   );
-};
-
-export default Navbar;
+}

@@ -1,64 +1,85 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CatalogProvider } from './context/CatalogContext';
 import { CartProvider } from './context/CartContext';
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
+import { ToastProvider } from './context/ToastContext';
+import Layout from './components/layout/Layout';
 import Home from './pages/Home';
-import Products from './pages/Products';
+import Shop from './pages/Shop';
+import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
-import Profile from './pages/Profile';
+import Account from './pages/Account';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Flyer from './pages/internal/prints/Flyer';
-import Flyer2 from './pages/internal/prints/Flyer2';
-import FontPreview from './pages/internal/FontPreview';
+import AuthAction from './pages/AuthAction';
+import InfoPage from './pages/InfoPage';
+import BuildASet from './pages/BuildASet';
+import Corporate from './pages/Corporate';
+import NotFound from './pages/NotFound';
 
-function AppContent() {
-  const location = useLocation();
-  const isInternalRoute = location.pathname.startsWith('/internal');
+const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
+const Flyer = lazy(() => import('./pages/internal/prints/Flyer'));
+const Flyer2 = lazy(() => import('./pages/internal/prints/Flyer2'));
+const FontPreview = lazy(() => import('./pages/internal/FontPreview'));
 
-  if (isInternalRoute) {
+const Loading = () => <div className="wrap py-24 text-center text-muted">Loading…</div>;
+
+function AppRoutes() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/internal')) {
     return (
-      <Routes>
-        <Route path="/internal/prints/flyer" element={<Flyer />} />
-        <Route path="/internal/prints/flyer2" element={<Flyer2 />} />
-        <Route path="/internal/font-preview" element={<FontPreview />} />
-      </Routes>
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="/internal/prints/flyer" element={<Flyer />} />
+          <Route path="/internal/prints/flyer2" element={<Flyer2 />} />
+          <Route path="/internal/font-preview" element={<FontPreview />} />
+        </Routes>
+      </Suspense>
     );
   }
-
+  if (pathname.startsWith('/admin')) {
+    return <Suspense fallback={<Loading />}><AdminApp /></Suspense>;
+  }
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <main className="flex-grow">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/order-confirmation" element={<OrderConfirmation />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/shop" element={<Shop />} />
+        <Route path="/shop/:category" element={<Shop />} />
+        <Route path="/products" element={<Navigate to="/shop" replace />} />
+        <Route path="/product/:slug" element={<ProductDetail />} />
+        <Route path="/build-a-set" element={<BuildASet />} />
+        <Route path="/corporate" element={<Corporate />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/order-confirmation" element={<OrderConfirmation />} />
+        <Route path="/account" element={<Account />} />
+        <Route path="/profile" element={<Navigate to="/account" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/auth/action" element={<AuthAction />} />
+        <Route path="/:slug" element={<InfoPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Layout>
   );
 }
 
-function App() {
+export default function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </CartProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <CatalogProvider>
+          <CartProvider>
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
+          </CartProvider>
+        </CatalogProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;
