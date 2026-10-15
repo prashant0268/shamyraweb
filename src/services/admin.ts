@@ -31,6 +31,7 @@ export const deleteDiscount = (code: string) => deleteDoc(doc(db, 'discounts', c
 
 export async function listQuotes(): Promise<Quote[]> { const s = await getDocs(query(collection(db, 'quotes'), orderBy('createdAt', 'desc'), limit(200))); return s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Quote, 'id'>) })); }
 export const updateQuote = (id: string, data: Partial<Quote>) => setDoc(doc(db, 'quotes', id), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+export const deleteQuote = (id: string) => deleteDoc(doc(db, 'quotes', id));
 
 export async function listReviews(): Promise<Review[]> { const s = await getDocs(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(200))); return s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Review, 'id'>) })); }
 export const setReviewApproved = (id: string, approved: boolean) => setDoc(doc(db, 'reviews', id), { approved }, { merge: true });

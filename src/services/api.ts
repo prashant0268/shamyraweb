@@ -18,6 +18,7 @@ export const capturePayPalOrder = call<{ paypalOrderId: string; orderId: string 
 export const ensureAdmin = call<Record<string, never>, { admin: boolean; refreshed: boolean }>('ensureAdmin');
 export const updateOrderStatus = call<{ orderId: string; status: string; tracking?: { carrier: string; number: string }; internalNotes?: string }, { ok: boolean }>('updateOrderStatus');
 export const refundOrder = call<{ orderId: string }, { ok: boolean }>('refundOrder');
+export const deleteOrder = call<{ orderId: string }, { ok: boolean }>('deleteOrder');
 export const submitQuote = call<Record<string, unknown>, { ok: boolean; id: string }>('submitQuote');
 export const createInvoice = call<{ quoteId: string; lines: { description: string; unitPrice: number; quantity: number }[]; daysUntilDue?: number; memo?: string }, { ok: boolean; url: string; total: number }>('createInvoice');
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import { adminListOrders, getOrder } from '../../services/orders';
-import { refundOrder, updateOrderStatus, errorMessage } from '../../services/api';
+import { refundOrder, updateOrderStatus, deleteOrder, errorMessage } from '../../services/api';
 import { formatDate, money } from '../../lib/format';
 import Button from '../../components/ui/Button';
 import { Badge, Field } from '../../components/ui/Bits';
@@ -59,6 +59,10 @@ function OrderDetail({ id, onChange }: { id: string; onChange: () => void }) {
     if (!confirmRefund) { setConfirmRefund(true); return; }
     setBusy(true); try { await refundOrder({ orderId: o.id }); toast('Refunded'); await load(); onChange(); } catch (e) { toast(errorMessage(e)); } finally { setBusy(false); setConfirmRefund(false); }
   };
+  const remove = async () => {
+    if (!window.confirm(`Delete unpaid order ${o.number}? This cannot be undone.`)) return;
+    setBusy(true); try { await deleteOrder({ orderId: o.id }); toast('Order deleted'); onChange(); navigate('/admin/orders'); } catch (e) { toast(errorMessage(e)); setBusy(false); }
+  };
   const a = o.shippingAddress;
   return (
     <div className="space-y-4">
@@ -78,6 +82,7 @@ function OrderDetail({ id, onChange }: { id: string; onChange: () => void }) {
             {o.tracking?.number && <a href={o.tracking.url} target="_blank" rel="noreferrer" className="block text-sm text-pine underline">Track {o.tracking.carrier} {o.tracking.number}</a>}
             {o.paymentStatus === 'paid' && o.status !== 'refunded' && <Button block variant={confirmRefund ? 'danger' : 'ghost'} size="sm" disabled={busy} onClick={refund}>{confirmRefund ? `Confirm full refund of ${money(o.total)}` : 'Refund'}</Button>}
             {o.status === 'pending' && <Button block variant="ghost" size="sm" disabled={busy} onClick={() => act('cancelled')}>Cancel unpaid order</Button>}
+            {(o.status === 'pending' || o.status === 'cancelled') && o.paymentStatus !== 'paid' && <button className="block w-full text-center text-xs text-muted hover:text-red-700" disabled={busy} onClick={remove}>Delete unpaid order</button>}
           </div>
           <div className="card space-y-2 p-4"><Field label="Internal notes"><textarea className="input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field><Button size="sm" variant="ghost" disabled={busy} onClick={() => act(o.status)}>Save notes</Button></div>
         </div>

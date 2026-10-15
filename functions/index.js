@@ -345,6 +345,22 @@ exports.onReviewWritten = onDocumentWritten("reviews/{reviewId}", async (event) 
 });
 
 /* ------------------------------- corporate -------------------------------- */
+// Admin-only: remove an order that was never paid (abandoned checkout, test order). Paid orders must be refunded, not deleted.
+exports.deleteOrder = onCall({ cors: true }, async (request) => {
+  requireAdmin(request);
+  const { orderId } = request.data || {};
+  if (!orderId || typeof orderId !== "string") throw new HttpsError("invalid-argument", "orderId required.");
+  const ref = db.doc(`orders/${orderId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
+  const o = snap.data();
+  if (o.paymentStatus === "paid" || ["paid", "fulfilled", "shipped", "delivered"].includes(o.status)) {
+    throw new HttpsError("failed-precondition", "Paid orders can't be deleted. Refund or cancel instead.");
+  }
+  await ref.delete();
+  return { ok: true };
+});
+
 exports.submitQuote = onCall({ cors: true, secrets: MAIL_SECRETS }, async (request) => {
   const d = request.data || {};
   const s = (v, n = 200) => String(v || "").trim().slice(0, n);

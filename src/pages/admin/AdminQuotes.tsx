@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../../context/ToastContext';
-import { listQuotes, updateQuote, saveDiscount } from '../../services/admin';
+import { listQuotes, updateQuote, saveDiscount, deleteQuote } from '../../services/admin';
 import { Timestamp } from 'firebase/firestore';
 import { slugify } from '../../lib/format';
 import { createInvoice, errorMessage } from '../../services/api';
@@ -32,6 +32,10 @@ export default function AdminQuotes() {
       window.open(`/internal/prints/insert?code=${encodeURIComponent(code)}&company=${encodeURIComponent(q.company)}&pct=15&copies=${Math.min(12, q.quantity)}`, '_blank');
     } catch (e) { toast(errorMessage(e)); }
   };
+  const remove = async (q: Quote) => {
+    if (!window.confirm(`Delete the quote request from ${q.company}? This cannot be undone.`)) return;
+    try { await deleteQuote(q.id); toast('Quote deleted'); load(); } catch (e) { toast(errorMessage(e)); }
+  };
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">Quote requests from the <a href="/corporate" className="underline">corporate page</a>. Reply by email, then send a Stripe invoice (card, ACH or Net-30) from here.</p>
@@ -40,7 +44,8 @@ export default function AdminQuotes() {
         {quotes.map((q) => <tr key={q.id} className="border-t border-line align-top"><td className="p-3"><b>{q.company}</b><div className="text-xs text-muted">{q.name} · {q.email}{q.phone ? ` · ${q.phone}` : ''}<br />{formatDate(q.createdAt)}</div></td><td className="p-3">{q.quantity} × {q.product}<div className="text-xs text-muted">{q.budget}/unit · {q.customization.join(', ') || 'no customization'} · {q.shippingMode}</div>{q.notes && <div className="mt-1 text-xs italic">“{q.notes}”</div>}</td><td className="p-3">{q.neededBy || '—'}{q.recipients?.length ? <div className="text-xs"><button className="text-pine underline" onClick={() => downloadCsv(q)}>{q.recipients.length} recipients ↓</button></div> : null}{q.giftCode && <div className="text-xs text-muted">Insert code {q.giftCode}</div>}</td><td className="p-3"><Badge tone={q.status === 'new' ? 'warn' : q.status === 'won' || q.status === 'invoiced' ? 'good' : q.status === 'lost' ? 'bad' : 'accent'}>{q.status}</Badge>{q.invoiceUrl && <a href={q.invoiceUrl} target="_blank" rel="noreferrer" className="block text-xs underline">Invoice {money(q.invoiceTotal || 0)}</a>}</td><td className="space-y-1 p-3 text-right">
           <select className="input text-xs" value={q.status} onChange={async (e) => { await updateQuote(q.id, { status: e.target.value as Quote['status'] }); load(); }}>{['new', 'quoted', 'invoiced', 'won', 'lost'].map((s) => <option key={s}>{s}</option>)}</select>
           <Button size="sm" variant="ghost" onClick={() => startInvoice(q)}>Create invoice</Button>
-          <Button size="sm" variant="ghost" onClick={() => giftCode(q)}>{q.giftCode ? 'Print inserts' : 'Gift code + inserts'}</Button></td></tr>)}
+          <Button size="sm" variant="ghost" onClick={() => giftCode(q)}>{q.giftCode ? 'Print inserts' : 'Gift code + inserts'}</Button>
+          <button className="block w-full text-right text-xs text-muted hover:text-red-700" onClick={() => remove(q)}>Delete</button></td></tr>)}
       </tbody></table></div>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog"><div className="card w-full max-w-lg space-y-3 p-5"><h2 className="text-xl">Invoice · {open.company}</h2><p className="text-sm text-muted">Sent by Stripe to {open.email}. They can pay by card or bank transfer.</p>
