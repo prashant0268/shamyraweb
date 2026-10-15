@@ -6,7 +6,7 @@
    https://console.firebase.google.com/project/shamyra-web/usage/details
    Cloud Functions (checkout pricing, PayPal, Stripe, emails, admin) cannot deploy or run without it. The old functions already stopped responding (HTTP 500) for this reason, so PayPal on the old site was already broken.
    After enabling: `firebase deploy --only functions --project shamyra-web` (or just `npm run deploy`).
-2. **Set up Firebase Storage** (one click “Get started”): https://console.firebase.google.com/project/shamyra-web/storage
+2. ~~Set up Firebase Storage~~ **Done 2026-10-15** — rules deployed; photo upload in the product editor works.
    Then add `"storage": { "rules": "storage.rules" }` back into `firebase.json` and deploy. Until then, photo upload in the admin won't work (you can still paste image URLs).
 3. **Admin access:** sign in on the site with `prashant0268@gmail.com` (Google or email). The `ensureAdmin` function grants the admin claim to emails listed in `functions/.env` → `ADMIN_EMAILS`. Then open `/admin`.
 4. **Seed the catalog:** Admin → Products → “Import default catalog to Firestore”. Until you do, the store serves the built-in catalog (read-only).
