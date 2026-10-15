@@ -313,7 +313,7 @@ exports.updateOrderStatus = onCall({ cors: true, secrets: MAIL_SECRETS }, async 
   return { ok: true };
 });
 
-exports.refundOrder = onCall({ cors: true, secrets: [...STRIPE_SECRETS, ...PAYPAL_SECRETS] }, async (request) => {
+exports.refundOrder = onCall({ cors: true, secrets: [...new Set([...STRIPE_SECRETS, ...PAYPAL_SECRETS])] }, async (request) => {
   requireAdmin(request);
   const { orderId } = request.data || {};
   const ref = db.doc(`orders/${orderId}`);
