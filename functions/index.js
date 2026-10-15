@@ -540,7 +540,7 @@ async function sendReviewRequest(order) {
 async function sendMail({ to, subject, html, text }) {
   if (!to) return;
   if (ENABLE_RESEND && process.env.RESEND_API_KEY) {
-    const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html, text }) });
+    const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: FROM_EMAIL, to: [to], reply_to: ENV.REPLY_TO || "hello@kindflames.com", subject, html, text }) });
     if (!r.ok) console.error("resend error", r.status, await r.text());
     return;
   }
