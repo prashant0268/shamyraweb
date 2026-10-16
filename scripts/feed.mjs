@@ -57,6 +57,7 @@ function title(p, variant) {
 export function buildItems(catalog) {
   const items = [];
   for (const p of catalog) {
+    if (p.hidden) continue; // unlisted SKUs (e.g. corporate sample kit) stay out of Shopping
     if (p.active === false) continue;
     const variants = Array.isArray(p.variants) && p.variants.length ? p.variants : [{ id: 'default', price: p.price, stock: p.stock }];
     const slug = p.slug || p.id;
