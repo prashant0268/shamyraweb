@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { loadProducts, activeOnly } from '../lib/catalog';
+import { loadProducts, activeOnly, listed } from '../lib/catalog';
 import type { Product, StoreSettings } from '../types';
 
 export const DEFAULT_SETTINGS: StoreSettings = {
@@ -37,12 +37,13 @@ export const CatalogProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const products = useMemo(() => activeOnly(allProducts), [allProducts]);
+  const products = useMemo(() => listed(allProducts), [allProducts]);
+  const active = useMemo(() => activeOnly(allProducts), [allProducts]);
   const value = useMemo<CatalogContextType>(() => ({
     products, allProducts, settings, loading, source, refresh,
-    bySlug: (slug) => products.find((p) => p.slug === slug || p.id === slug),
+    bySlug: (slug) => active.find((p) => p.slug === slug || p.id === slug),
     byId: (id) => allProducts.find((p) => p.id === id),
-  }), [products, allProducts, settings, loading, source, refresh]);
+  }), [products, active, allProducts, settings, loading, source, refresh]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 };

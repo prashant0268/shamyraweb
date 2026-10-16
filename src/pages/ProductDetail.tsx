@@ -7,7 +7,8 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { money } from '../lib/format';
-import { useSeo } from '../lib/seo';
+import { useSeo, useJsonLd } from '../lib/seo';
+import { productJsonLd } from '../lib/productJsonLd';
 import { track } from '../lib/analytics';
 import { useWishlist } from '../lib/wishlist';
 import ProductCard from '../components/ui/ProductCard';
@@ -37,6 +38,9 @@ export default function ProductDetail() {
     getDocs(query(collection(db, 'reviews'), where('productId', '==', product.id), where('approved', '==', true), orderBy('createdAt', 'desc'), limit(20)))
       .then((s) => setReviews(s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Review, 'id'>) })))).catch(() => setReviews([]));
   }, [product]);
+
+  const jsonLd = useMemo(() => (product ? productJsonLd(product, reviews) : null), [product, reviews]);
+  useJsonLd('product-jsonld', jsonLd);
 
   const pairs = useMemo(() => product ? products.filter((p) => p.id !== product.id && (p.family === product.family || (product.category === 'candle' ? BODY_CATEGORIES.includes(p.category) && p.family === product.family : p.category === 'candle' && p.family === product.family))).slice(0, 4) : [], [product, products]);
 

@@ -13,6 +13,8 @@ export interface Product {
   burnTime?: string; wax?: string; wick?: string; ingredients?: string; bundleItems?: string[];
   variants: Variant[]; featured: boolean; isNewArrival: boolean; collections: string[]; active: boolean; sortOrder: number;
   rating?: number | null; reviewCount?: number; badge?: string;
+  /** Purchasable by direct URL but left out of shop/home listings (e.g. the corporate sample kit). */
+  hidden?: boolean;
 }
 
 export interface CartItem { productId: string; variantId: string; quantity: number; bundle?: string | null }
