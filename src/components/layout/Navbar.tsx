@@ -8,6 +8,7 @@ const LINKS = [
   { to: '/shop/candle', label: 'Candles' },
   { to: '/shop/body', label: 'Bath & Body' },
   { to: '/shop/set', label: 'Gift Sets' },
+  { to: '/gifts', label: 'Gifts' },
   { to: '/build-a-set', label: 'Build a Set' },
   { to: '/corporate', label: 'Corporate' },
 ];
@@ -22,18 +23,18 @@ export default function Navbar() {
   useEffect(() => { document.body.style.overflow = menu ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [menu]);
 
   const search = (e: FormEvent) => { e.preventDefault(); if (q.trim()) { navigate(`/shop?q=${encodeURIComponent(q.trim())}`); setMenu(false); } };
-  const link = 'border-b-2 border-transparent py-1 font-medium text-ink hover:text-pine';
+  const link = 'whitespace-nowrap border-b-2 border-transparent py-1 font-medium text-ink hover:text-pine';
   const active = ({ isActive }: { isActive: boolean }) => `${link} ${isActive ? 'border-honey' : ''}`;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
-      <div className="wrap flex h-16 items-center gap-4">
+      <div className="wrap flex h-16 items-center gap-3 lg:gap-4">
         <button className="rounded-lg p-2 hover:bg-surface-2 md:hidden" aria-label="Menu" onClick={() => setMenu(true)}><Menu size={22} /></button>
-        <Link to="/" className="flex items-center gap-2 whitespace-nowrap font-display text-xl font-bold tracking-tight sm:text-2xl">
+        <Link to="/" className="flex shrink-0 items-center gap-2 whitespace-nowrap font-display text-xl font-bold tracking-tight sm:text-2xl md:text-xl xl:text-2xl">
           <img src="/img/logo-512.png" alt="" width="36" height="36" className="h-9 w-9 object-contain" />
           <span>Kind Flames</span>
         </Link>
-        <nav className="ml-4 hidden items-center gap-6 md:flex">{LINKS.map((l) => <NavLink key={l.to} to={l.to} className={active}>{l.label}</NavLink>)}</nav>
+        <nav className="ml-2 hidden items-center gap-3 text-sm md:flex lg:gap-4 xl:ml-4 xl:gap-6 xl:text-base">{LINKS.map((l) => <NavLink key={l.to} to={l.to} className={active}>{l.label}</NavLink>)}</nav>
         <div className="flex-1" />
         <form onSubmit={search} className="hidden items-center gap-2 rounded-full bg-surface-2 px-3 py-1.5 lg:flex">
           <Search size={16} className="text-muted" />
@@ -51,7 +52,7 @@ export default function Navbar() {
           <div className="flex h-full w-[min(320px,85vw)] flex-col gap-1 overflow-auto bg-surface p-5">
             <div className="mb-2 flex items-center justify-between"><span className="font-display text-xl font-bold">Menu</span><button onClick={() => setMenu(false)} aria-label="Close" className="rounded-lg p-2 hover:bg-surface-2"><X size={22} /></button></div>
             <form onSubmit={search} className="mb-3 flex items-center gap-2 rounded-full bg-surface-2 px-3 py-2"><Search size={16} className="text-muted" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search" className="w-full bg-transparent text-sm outline-none" /></form>
-            {[{ to: '/shop', label: 'Shop all' }, { to: '/shop/candle', label: 'Candles' }, { to: '/shop/scrub', label: 'Body Scrubs' }, { to: '/shop/lotion', label: 'Lotions' }, { to: '/shop/salt', label: 'Bath Salts' }, { to: '/shop/set', label: 'Gift Sets' }, { to: '/build-a-set', label: 'Build a Spa Set' }, { to: '/corporate', label: 'Corporate Gifting' }, { to: '/subscribe', label: 'Candle of the Month' }, { to: user && !user.isAnonymous ? '/account' : '/login', label: user && !user.isAnonymous ? 'My account' : 'Sign in' }, ...(user?.isAdmin ? [{ to: '/admin', label: 'Admin' }] : [])].map((l) => (
+            {[{ to: '/shop', label: 'Shop all' }, { to: '/gifts', label: 'Holiday Gift Guide' }, { to: '/shop/candle', label: 'Candles' }, { to: '/shop/scrub', label: 'Body Scrubs' }, { to: '/shop/lotion', label: 'Lotions' }, { to: '/shop/salt', label: 'Bath Salts' }, { to: '/shop/set', label: 'Gift Sets' }, { to: '/build-a-set', label: 'Build a Spa Set' }, { to: '/corporate', label: 'Corporate Gifting' }, { to: '/subscribe', label: 'Candle of the Month' }, { to: user && !user.isAnonymous ? '/account' : '/login', label: user && !user.isAnonymous ? 'My account' : 'Sign in' }, ...(user?.isAdmin ? [{ to: '/admin', label: 'Admin' }] : [])].map((l) => (
               <Link key={l.to} to={l.to} onClick={() => setMenu(false)} className="border-b border-line py-3 font-display text-lg">{l.label}</Link>
             ))}
           </div>

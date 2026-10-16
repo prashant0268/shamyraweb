@@ -18,6 +18,7 @@ import AuthAction from './pages/AuthAction';
 import InfoPage from './pages/InfoPage';
 import BuildASet from './pages/BuildASet';
 import Corporate from './pages/Corporate';
+import Gifts from './pages/Gifts';
 import Subscribe, { SubscribeThanks } from './pages/Subscribe';
 import NotFound from './pages/NotFound';
 
@@ -56,6 +57,7 @@ function AppRoutes() {
         <Route path="/product/:slug" element={<ProductDetail />} />
         <Route path="/build-a-set" element={<BuildASet />} />
         <Route path="/corporate" element={<Corporate />} />
+        <Route path="/gifts" element={<Gifts />} />
         <Route path="/subscribe" element={<Subscribe />} />
         <Route path="/subscribe/thanks" element={<SubscribeThanks />} />
         <Route path="/cart" element={<Cart />} />
