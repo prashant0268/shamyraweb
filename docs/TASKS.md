@@ -25,7 +25,7 @@ Catalog in Firestore with 5 categories · product detail pages · search/filter 
 
 | # | Task | Owner | Status | Notes |
 |---|------|-------|--------|-------|
-| 9 | Marketing email: sync newsletter + customers to Resend Audiences; welcome series, post-purchase care tips, 45-day reorder nudge | dev | todo | Touches functions/index.js — runs in the main session, sequential with #10–12. |
+| 9 | Marketing email: sync newsletter + customers to Resend Audiences; welcome series, post-purchase care tips, 45-day reorder nudge | dev / you | review | Functions + rules live Oct 15 (`functions/marketing.js`, daily `marketingDrip` 10:00 ET, `/api/unsubscribe`). **Hosting deploy pending** for the unsubscribe rewrite + Admin → Newsletter buttons: `firebase deploy --only hosting --project shamyra-web`. Then you: Admin → Newsletter → "Send me test emails", then "Sync to Resend audience". See HANDOFF → Marketing email. |
 | 10 | Referral codes: share link = 10% for a friend, $5 credit for the referrer | dev | todo | functions + checkout + account. |
 | 11 | Weekly owner digest (sales, top products, recovered carts) + low-stock alerts | dev | todo | functions scheduler. |
 | 12 | Stripe webhook enabled (`STRIPE_WEBHOOK_SECRET` + `features.json`) | dev / you | todo | You create the endpoint in Stripe; dev flips the flag and deploys. |
