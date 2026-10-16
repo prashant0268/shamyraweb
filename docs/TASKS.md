@@ -15,8 +15,8 @@ Catalog in Firestore with 5 categories · product detail pages · search/filter 
 | 1 | Real product photos (one lifestyle shot per candle, group shot per set) | you | todo | Upload via Admin → Products. Biggest conversion lever. |
 | 2 | Enable Apple Pay, Google Pay, Link (and Klarna/Affirm) in Stripe → Settings → Payment methods | you | todo | Checkout picks them up automatically. |
 | 3 | Holiday gift guide page `/gifts` (by recipient and budget, bundle builder CTA) | dev | todo | Parallel-safe: new page + nav link. |
-| 4 | Google Merchant Center product feed (`/feed.xml` generated at build) + site verification | dev | todo | Parallel-safe. You claim the Merchant Center account and submit the feed URL. |
-| 5 | Meta Pixel + Conversions API alongside GA4 events | dev | todo | Needs your Pixel ID. Goes with #4 (same files). |
+| 4 | Google Merchant Center product feed (`/feed.xml` generated at build) + site verification | dev / you | review | Built on branch `claude/jovial-carson-c75be3` (46 items). You: verify the site (paste the token into `index.html`), add the scheduled fetch of `https://kindflames.com/feed.xml`, set shipping/returns/tax in Merchant Center. See HANDOFF → Google Merchant Center. |
+| 5 | Meta Pixel + Conversions API alongside GA4 events | dev / you | review | Pixel built (same branch as #4): set `VITE_META_PIXEL_ID` in `.env.production` and deploy. **Follow-up:** Conversions API (server side, dedupe via the `purchase:<order>` eventID already sent) not done in this pass. |
 | 6 | Per-product JSON-LD (Product, Offer, AggregateRating) on product pages | dev | todo | Parallel-safe: ProductDetail only. |
 | 7 | Corporate sample kit SKU ($25, credited on first bulk order) | dev | todo | Parallel-safe: catalog + corporate page. Goes with #6. |
 | 8 | Chrome cache / disk cleanup so builds and deploys keep working | you | done | 9 GB free as of Oct 15. |
