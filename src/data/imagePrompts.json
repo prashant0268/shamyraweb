@@ -1,0 +1,599 @@
+{
+ "version": 1,
+ "howTo": "1. Open Gemini (gemini.google.com, or Google AI Studio with the image model) and start **one new chat per product**.\n2. **Attach the logo file** `public/img/logo-lockup.png` to the first message of each chat (also at https://kindflames.com/img/logo-lockup.png once deployed). It's the black KF monogram with the KINDFLAMES wordmark on a transparent background; Gemini copies it onto the labels.\n3. Paste the **Brand style block** below as the first message, with the logo attached. Then send each shot prompt as its own message.\n4. Settings: square **1:1** aspect ratio, highest quality available. Generate 2–4 candidates per shot and keep the best one.\n5. Label text is the part AI gets wrong most. If a label is misspelled or garbled, reply \"Regenerate; the label must read exactly: …\" with the text again. Don't chase perfection on the small 4 oz jars in the lineup shots.\n6. Save files with **exactly these names** into one folder, e.g. `~/Downloads/kindflames-images/`. The name is given with each prompt (`lavender-dreams-1-hero.png`). PNG or JPG is fine. Tell me the folder and I'll crop, colour-match, convert to WebP at 800 and 400 px and upload everything through the admin.",
+ "brand": "You are producing product photography for Kind Flames, a small hand-poured candle and bath brand from New Jersey. Treat every image in this chat as part of one consistent catalogue shot by the same photographer.\n\nSTYLE: real photograph, not an illustration. Natural soft daylight from a window on the left, gentle shadows, shallow depth of field on lifestyle shots and sharp front-to-back on product shots. Calm, warm, minimal. No people's faces. No extra text anywhere in the scene except the product labels described below. Colour palette: warm off-white (#F3F1EC), deep pine green (#214238), honey gold (#C68A1E), natural kraft, linen, light oak wood, white marble, matte ceramic. Nothing glossy or neon.\n\nLOGO: the attached image is the Kind Flames logo: a black \"KF\" monogram where the stem of the F is a flame, with the wordmark KINDFLAMES in widely spaced black capitals beneath it. Reproduce it faithfully on every label, centred at the top of the label, in black on the cream label. On small labels (4 oz jars, travel tube, sachets) use just the KF monogram without the wordmark. Do not redraw, recolour or restyle it.\n\nPACKAGING SYSTEM (use the same every time):\n- Candles: straight-sided clear glass tumbler jar, natural off-white soy wax (no colour in the wax), a brushed gold metal lid shown beside or behind the jar. Label: a matte cream (#F3F1EC) rectangular paper label wrapped on the front of the jar with the logo at the top, the product name in an elegant serif (like Fraunces) in black, the three fragrance notes in small sans-serif below separated by small dots, and the size in small text at the bottom. A thin honey-gold rule under the product name is the only colour on the label.\n- Body scrubs: wide-mouth frosted glass jar with a bamboo screw lid. Same cream label system with name, notes, size.\n- Lotions: matte amber glass pump bottle (8 oz) and a small matte white travel tube (2 oz) where mentioned. Same cream label system.\n- Bath salts: clear glass apothecary jar with a cork lid and a small wooden scoop. Same cream label system.\n- Gift sets: a natural kraft box with a lift-off lid, cream crinkle paper, a cream round sticker printed with the black KF monogram sealing a cream card.\n\nReply \"Ready\" and wait for the shot prompts.",
+ "shots": [
+  {
+   "filename": "lavender-dreams-1-hero.png",
+   "productId": "lavender-dreams",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Lavender Dreams\" / \"Bergamot · French lavender · Tonka bean\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Lavender Dreams",
+   "group": "Candles"
+  },
+  {
+   "filename": "lavender-dreams-2-lit.png",
+   "productId": "lavender-dreams",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Lavender Dreams candle, lit with a small steady flame, placed on a bedside table at dusk with white linen, a closed book and a sprig of dried lavender. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Lavender Dreams\" / \"Bergamot · French lavender · Tonka bean\" / \"8 oz\".",
+   "productName": "Lavender Dreams",
+   "group": "Candles"
+  },
+  {
+   "filename": "lavender-dreams-3-detail.png",
+   "productId": "lavender-dreams",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Lavender Dreams jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with dried lavender sprigs and a few bergamot peel curls arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Lavender Dreams",
+   "group": "Candles"
+  },
+  {
+   "filename": "lavender-dreams-4-sizes.png",
+   "productId": "lavender-dreams",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Lavender Dreams candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Lavender Dreams\" / \"Bergamot · French lavender · Tonka bean\" / \"8 oz\".",
+   "productName": "Lavender Dreams",
+   "group": "Candles"
+  },
+  {
+   "filename": "vanilla-bliss-1-hero.png",
+   "productId": "vanilla-bliss",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Vanilla Bliss\" / \"Brown sugar · Madagascar vanilla · Sandalwood\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Vanilla Bliss",
+   "group": "Candles"
+  },
+  {
+   "filename": "vanilla-bliss-2-lit.png",
+   "productId": "vanilla-bliss",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Vanilla Bliss candle, lit with a small steady flame, placed on a kitchen counter in the morning with a ceramic mug and a small dish of brown sugar. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Vanilla Bliss\" / \"Brown sugar · Madagascar vanilla · Sandalwood\" / \"8 oz\".",
+   "productName": "Vanilla Bliss",
+   "group": "Candles"
+  },
+  {
+   "filename": "vanilla-bliss-3-detail.png",
+   "productId": "vanilla-bliss",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Vanilla Bliss jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with a vanilla pod split open and a small heap of brown sugar arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Vanilla Bliss",
+   "group": "Candles"
+  },
+  {
+   "filename": "vanilla-bliss-4-sizes.png",
+   "productId": "vanilla-bliss",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Vanilla Bliss candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Vanilla Bliss\" / \"Brown sugar · Madagascar vanilla · Sandalwood\" / \"8 oz\".",
+   "productName": "Vanilla Bliss",
+   "group": "Candles"
+  },
+  {
+   "filename": "ocean-breeze-1-hero.png",
+   "productId": "ocean-breeze",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Ocean Breeze\" / \"Sea salt · Driftwood · White musk\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Ocean Breeze",
+   "group": "Candles"
+  },
+  {
+   "filename": "ocean-breeze-2-lit.png",
+   "productId": "ocean-breeze",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Ocean Breeze candle, lit with a small steady flame, placed on a bathroom windowsill with white tiles, a piece of driftwood and a folded white towel. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Ocean Breeze\" / \"Sea salt · Driftwood · White musk\" / \"8 oz\".",
+   "productName": "Ocean Breeze",
+   "group": "Candles"
+  },
+  {
+   "filename": "ocean-breeze-3-detail.png",
+   "productId": "ocean-breeze",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Ocean Breeze jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with a small piece of pale driftwood and coarse sea salt arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Ocean Breeze",
+   "group": "Candles"
+  },
+  {
+   "filename": "ocean-breeze-4-sizes.png",
+   "productId": "ocean-breeze",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Ocean Breeze candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Ocean Breeze\" / \"Sea salt · Driftwood · White musk\" / \"8 oz\".",
+   "productName": "Ocean Breeze",
+   "group": "Candles"
+  },
+  {
+   "filename": "pure-soy-natural-1-hero.png",
+   "productId": "pure-soy-natural",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Pure Soy Natural\" / \"8 oz\". Wax: natural off-white 100% soy, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Pure Soy Natural",
+   "group": "Candles"
+  },
+  {
+   "filename": "pure-soy-natural-2-lit.png",
+   "productId": "pure-soy-natural",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Pure Soy Natural candle, lit with a small steady flame, placed on a set dinner table with linen napkins and simple stoneware, candle lit at the centre. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Pure Soy Natural\" / \"8 oz\".",
+   "productName": "Pure Soy Natural",
+   "group": "Candles"
+  },
+  {
+   "filename": "pure-soy-natural-3-detail.png",
+   "productId": "pure-soy-natural",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Pure Soy Natural jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with a cotton wick trimmer and plain soy wax flakes arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Pure Soy Natural",
+   "group": "Candles"
+  },
+  {
+   "filename": "pure-soy-natural-4-sizes.png",
+   "productId": "pure-soy-natural",
+   "shot": "sizes",
+   "prompt": "Size lineup. 2 Kind Flames Pure Soy Natural candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 8 oz, 12 oz. Same label on each; only the size line changes (8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Pure Soy Natural\" / \"8 oz\".",
+   "productName": "Pure Soy Natural",
+   "group": "Candles"
+  },
+  {
+   "filename": "beeswax-classic-1-hero.png",
+   "productId": "beeswax-classic",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Beeswax Classic\" / \"Raw honey · Beeswax · Warm hay\" / \"8 oz\". Wax: natural off-white 100% beeswax, a single cotton wick. The wax is natural honey-yellow beeswax, not white. Square, sharp, catalogue style.",
+   "productName": "Beeswax Classic",
+   "group": "Candles"
+  },
+  {
+   "filename": "beeswax-classic-2-lit.png",
+   "productId": "beeswax-classic",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Beeswax Classic candle, lit with a small steady flame, placed on a rustic oak shelf with a small jar of honey and a honey dipper. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Beeswax Classic\" / \"Raw honey · Beeswax · Warm hay\" / \"8 oz\". The wax is natural honey-yellow beeswax, not white.",
+   "productName": "Beeswax Classic",
+   "group": "Candles"
+  },
+  {
+   "filename": "beeswax-classic-3-detail.png",
+   "productId": "beeswax-classic",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Beeswax Classic jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with a piece of honeycomb and a wooden honey dipper arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light. The wax is natural honey-yellow beeswax, not white.",
+   "productName": "Beeswax Classic",
+   "group": "Candles"
+  },
+  {
+   "filename": "beeswax-classic-4-sizes.png",
+   "productId": "beeswax-classic",
+   "shot": "sizes",
+   "prompt": "Size lineup. 2 Kind Flames Beeswax Classic candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 8 oz, 12 oz. Same label on each; only the size line changes (8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Beeswax Classic\" / \"Raw honey · Beeswax · Warm hay\" / \"8 oz\".",
+   "productName": "Beeswax Classic",
+   "group": "Candles"
+  },
+  {
+   "filename": "cinnamon-spice-1-hero.png",
+   "productId": "cinnamon-spice",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Cinnamon Spice\" / \"Orange peel · Cinnamon bark · Clove\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Cinnamon Spice",
+   "group": "Candles"
+  },
+  {
+   "filename": "cinnamon-spice-2-lit.png",
+   "productId": "cinnamon-spice",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Cinnamon Spice candle, lit with a small steady flame, placed on a dark wooden table on a winter evening with dried orange slices, cinnamon sticks and a wool throw. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Cinnamon Spice\" / \"Orange peel · Cinnamon bark · Clove\" / \"8 oz\".",
+   "productName": "Cinnamon Spice",
+   "group": "Candles"
+  },
+  {
+   "filename": "cinnamon-spice-3-detail.png",
+   "productId": "cinnamon-spice",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Cinnamon Spice jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with cinnamon sticks, dried orange slices and a few cloves arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Cinnamon Spice",
+   "group": "Candles"
+  },
+  {
+   "filename": "cinnamon-spice-4-sizes.png",
+   "productId": "cinnamon-spice",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Cinnamon Spice candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Cinnamon Spice\" / \"Orange peel · Cinnamon bark · Clove\" / \"8 oz\".",
+   "productName": "Cinnamon Spice",
+   "group": "Candles"
+  },
+  {
+   "filename": "rose-garden-1-hero.png",
+   "productId": "rose-garden",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Rose Garden\" / \"Green stem · English rose · Soft musk\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Rose Garden",
+   "group": "Candles"
+  },
+  {
+   "filename": "rose-garden-2-lit.png",
+   "productId": "rose-garden",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Rose Garden candle, lit with a small steady flame, placed on a dressing table with a small bud vase of pale pink English roses and a linen runner. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Rose Garden\" / \"Green stem · English rose · Soft musk\" / \"8 oz\".",
+   "productName": "Rose Garden",
+   "group": "Candles"
+  },
+  {
+   "filename": "rose-garden-3-detail.png",
+   "productId": "rose-garden",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Rose Garden jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with fresh pale-pink rose petals and a green stem arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Rose Garden",
+   "group": "Candles"
+  },
+  {
+   "filename": "rose-garden-4-sizes.png",
+   "productId": "rose-garden",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Rose Garden candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Rose Garden\" / \"Green stem · English rose · Soft musk\" / \"8 oz\".",
+   "productName": "Rose Garden",
+   "group": "Candles"
+  },
+  {
+   "filename": "pine-forest-1-hero.png",
+   "productId": "pine-forest",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Pine Forest\" / \"Juniper · Nordic pine · Moss\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a flat wooden wick. Square, sharp, catalogue style.",
+   "productName": "Pine Forest",
+   "group": "Candles"
+  },
+  {
+   "filename": "pine-forest-2-lit.png",
+   "productId": "pine-forest",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Pine Forest candle, lit with a small steady flame, placed on a cabin windowsill with snow-dusted pine branches outside. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Pine Forest\" / \"Juniper · Nordic pine · Moss\" / \"8 oz\".",
+   "productName": "Pine Forest",
+   "group": "Candles"
+  },
+  {
+   "filename": "pine-forest-3-detail.png",
+   "productId": "pine-forest",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Pine Forest jar showing the smooth off-white wax surface and a flat wooden wick, lid off beside it, with juniper berries, a small Nordic pine sprig and a patch of moss arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Pine Forest",
+   "group": "Candles"
+  },
+  {
+   "filename": "pine-forest-4-sizes.png",
+   "productId": "pine-forest",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Pine Forest candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Pine Forest\" / \"Juniper · Nordic pine · Moss\" / \"8 oz\".",
+   "productName": "Pine Forest",
+   "group": "Candles"
+  },
+  {
+   "filename": "eucalyptus-mint-1-hero.png",
+   "productId": "eucalyptus-mint",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Eucalyptus Mint\" / \"Spearmint · Eucalyptus · Cedar\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Eucalyptus Mint",
+   "group": "Candles"
+  },
+  {
+   "filename": "eucalyptus-mint-2-lit.png",
+   "productId": "eucalyptus-mint",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Eucalyptus Mint candle, lit with a small steady flame, placed on the edge of a white bathtub with eucalyptus stems, a glass of water and a rolled towel. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Eucalyptus Mint\" / \"Spearmint · Eucalyptus · Cedar\" / \"8 oz\".",
+   "productName": "Eucalyptus Mint",
+   "group": "Candles"
+  },
+  {
+   "filename": "eucalyptus-mint-3-detail.png",
+   "productId": "eucalyptus-mint",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Eucalyptus Mint jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with fresh eucalyptus leaves and a spearmint sprig arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Eucalyptus Mint",
+   "group": "Candles"
+  },
+  {
+   "filename": "eucalyptus-mint-4-sizes.png",
+   "productId": "eucalyptus-mint",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Eucalyptus Mint candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Eucalyptus Mint\" / \"Spearmint · Eucalyptus · Cedar\" / \"8 oz\".",
+   "productName": "Eucalyptus Mint",
+   "group": "Candles"
+  },
+  {
+   "filename": "coconut-paradise-1-hero.png",
+   "productId": "coconut-paradise",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Coconut Paradise\" / \"Sea salt · Toasted coconut · Vanilla\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Coconut Paradise",
+   "group": "Candles"
+  },
+  {
+   "filename": "coconut-paradise-2-lit.png",
+   "productId": "coconut-paradise",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Coconut Paradise candle, lit with a small steady flame, placed on a sunlit windowsill with a halved coconut and a linen cloth, summer light. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Coconut Paradise\" / \"Sea salt · Toasted coconut · Vanilla\" / \"8 oz\".",
+   "productName": "Coconut Paradise",
+   "group": "Candles"
+  },
+  {
+   "filename": "coconut-paradise-3-detail.png",
+   "productId": "coconut-paradise",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Coconut Paradise jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with toasted coconut flakes and a halved coconut arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Coconut Paradise",
+   "group": "Candles"
+  },
+  {
+   "filename": "coconut-paradise-4-sizes.png",
+   "productId": "coconut-paradise",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Coconut Paradise candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Coconut Paradise\" / \"Sea salt · Toasted coconut · Vanilla\" / \"8 oz\".",
+   "productName": "Coconut Paradise",
+   "group": "Candles"
+  },
+  {
+   "filename": "unscented-white-1-hero.png",
+   "productId": "unscented-white",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Unscented White\" / \"8 oz\". Wax: natural off-white 100% soy, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Unscented White",
+   "group": "Candles"
+  },
+  {
+   "filename": "unscented-white-2-lit.png",
+   "productId": "unscented-white",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Unscented White candle, lit with a small steady flame, placed on a white mantelpiece, minimal, with a second jar unlit at a different height. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Unscented White\" / \"8 oz\".",
+   "productName": "Unscented White",
+   "group": "Candles"
+  },
+  {
+   "filename": "unscented-white-3-detail.png",
+   "productId": "unscented-white",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Unscented White jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with plain white soy wax flakes and a brass wick trimmer arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Unscented White",
+   "group": "Candles"
+  },
+  {
+   "filename": "unscented-white-4-sizes.png",
+   "productId": "unscented-white",
+   "shot": "sizes",
+   "prompt": "Size lineup. 2 Kind Flames Unscented White candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 8 oz, 12 oz. Same label on each; only the size line changes (8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Unscented White\" / \"8 oz\".",
+   "productName": "Unscented White",
+   "group": "Candles"
+  },
+  {
+   "filename": "pumpkin-spice-1-hero.png",
+   "productId": "pumpkin-spice",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames candle jar, unlit, centred, front label fully legible, on a seamless warm off-white plaster backdrop with a light oak surface. Brushed gold lid standing just behind to the right. Soft window light from the left. Label text, exactly: \"Pumpkin Spice\" / \"Pumpkin · Nutmeg · Brown butter\" / \"8 oz\". Wax: natural off-white coconut-soy blend, a single cotton wick. Square, sharp, catalogue style.",
+   "productName": "Pumpkin Spice",
+   "group": "Candles"
+  },
+  {
+   "filename": "pumpkin-spice-2-lit.png",
+   "productId": "pumpkin-spice",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The same 8 oz Pumpkin Spice candle, lit with a small steady flame, placed on a farmhouse table in autumn with a small white pumpkin, nutmeg and a plaid cloth. Label readable but the mood is the subject. Shallow depth of field, warm evening light. Label text, exactly: \"Pumpkin Spice\" / \"Pumpkin · Nutmeg · Brown butter\" / \"8 oz\".",
+   "productName": "Pumpkin Spice",
+   "group": "Candles"
+  },
+  {
+   "filename": "pumpkin-spice-3-detail.png",
+   "productId": "pumpkin-spice",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down at a slight angle. The open Pumpkin Spice jar showing the smooth off-white wax surface and a single cotton wick, lid off beside it, with a small pumpkin, whole nutmegs and a knob of browned butter on a dish arranged loosely next to the jar on linen. The label is partly visible. Macro feel, soft light.",
+   "productName": "Pumpkin Spice",
+   "group": "Candles"
+  },
+  {
+   "filename": "pumpkin-spice-4-sizes.png",
+   "productId": "pumpkin-spice",
+   "shot": "sizes",
+   "prompt": "Size lineup. 3 Kind Flames Pumpkin Spice candle jars side by side on a light oak surface, warm off-white backdrop, from smallest to largest: 4 oz, 8 oz, 12 oz. Same label on each; only the size line changes (4 oz, 8 oz, 12 oz). Unlit, lids off and stacked at the side. Front-on, sharp, evenly lit. Label text, exactly: \"Pumpkin Spice\" / \"Pumpkin · Nutmeg · Brown butter\" / \"8 oz\".",
+   "productName": "Pumpkin Spice",
+   "group": "Candles"
+  },
+  {
+   "filename": "brown-sugar-vanilla-scrub-1-hero.png",
+   "productId": "brown-sugar-vanilla-scrub",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames frosted glass jar of body scrub with a bamboo lid, label fully legible, on a seamless warm off-white backdrop with a white marble surface. Soft window light from the left. Label text, exactly: \"Brown Sugar & Vanilla Body Scrub\" / \"Brown sugar · Vanilla · Sweet almond\" / \"8 oz\". Square, sharp.",
+   "productName": "Brown Sugar & Vanilla Body Scrub",
+   "group": "Body scrubs"
+  },
+  {
+   "filename": "brown-sugar-vanilla-scrub-2-texture.png",
+   "productId": "brown-sugar-vanilla-scrub",
+   "shot": "texture",
+   "prompt": "Detail shot. The Brown Sugar & Vanilla Body Scrub jar open, bamboo lid beside it, a small wooden spoon lifting some scrub so the texture is visible: fine golden-brown sugar crystals suspended in pale oil. a vanilla pod and a spoon of brown sugar loosely around on marble. Top-down at a slight angle, macro feel.",
+   "productName": "Brown Sugar & Vanilla Body Scrub",
+   "group": "Body scrubs"
+  },
+  {
+   "filename": "brown-sugar-vanilla-scrub-3-lifestyle.png",
+   "productId": "brown-sugar-vanilla-scrub",
+   "shot": "lifestyle",
+   "prompt": "Lifestyle shot. The Brown Sugar & Vanilla Body Scrub jar on the edge of a white bathtub or a shower ledge with a folded white waffle towel, a wooden bath brush and a little water on the surface. Morning light. Label readable. Label text, exactly: \"Brown Sugar & Vanilla Body Scrub\" / \"Brown sugar · Vanilla · Sweet almond\" / \"8 oz\".",
+   "productName": "Brown Sugar & Vanilla Body Scrub",
+   "group": "Body scrubs"
+  },
+  {
+   "filename": "coffee-coconut-scrub-1-hero.png",
+   "productId": "coffee-coconut-scrub",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz Kind Flames frosted glass jar of body scrub with a bamboo lid, label fully legible, on a seamless warm off-white backdrop with a white marble surface. Soft window light from the left. Label text, exactly: \"Coffee & Coconut Body Scrub\" / \"Roasted coffee · Coconut · Cacao\" / \"8 oz\". Square, sharp.",
+   "productName": "Coffee & Coconut Body Scrub",
+   "group": "Body scrubs"
+  },
+  {
+   "filename": "coffee-coconut-scrub-2-texture.png",
+   "productId": "coffee-coconut-scrub",
+   "shot": "texture",
+   "prompt": "Detail shot. The Coffee & Coconut Body Scrub jar open, bamboo lid beside it, a small wooden spoon lifting some scrub so the texture is visible: dark ground coffee in creamy coconut oil. roasted coffee beans and a piece of coconut loosely around on marble. Top-down at a slight angle, macro feel.",
+   "productName": "Coffee & Coconut Body Scrub",
+   "group": "Body scrubs"
+  },
+  {
+   "filename": "coffee-coconut-scrub-3-lifestyle.png",
+   "productId": "coffee-coconut-scrub",
+   "shot": "lifestyle",
+   "prompt": "Lifestyle shot. The Coffee & Coconut Body Scrub jar on the edge of a white bathtub or a shower ledge with a folded white waffle towel, a wooden bath brush and a little water on the surface. Morning light. Label readable. Label text, exactly: \"Coffee & Coconut Body Scrub\" / \"Roasted coffee · Coconut · Cacao\" / \"8 oz\".",
+   "productName": "Coffee & Coconut Body Scrub",
+   "group": "Body scrubs"
+  },
+  {
+   "filename": "oat-honey-hand-lotion-1-hero.png",
+   "productId": "oat-honey-hand-lotion",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz matte amber glass pump bottle of Kind Flames lotion, with the matching 2 oz matte white travel tube standing beside it, labels fully legible, on a seamless warm off-white backdrop with a light oak surface. Soft window light. Label text, exactly: \"Oat & Honey Hand Lotion\" / \"Oat milk · Honey · Shea\" / \"8 oz pump\". The tube label is the same but its size line reads \"2 oz travel\". Square, sharp.",
+   "productName": "Oat & Honey Hand Lotion",
+   "group": "Lotions"
+  },
+  {
+   "filename": "oat-honey-hand-lotion-2-lifestyle.png",
+   "productId": "oat-honey-hand-lotion",
+   "shot": "lifestyle",
+   "prompt": "Lifestyle shot. The Oat & Honey Hand Lotion pump bottle next to a kitchen sink with a linen tea towel and a wooden dish brush. Shallow depth of field, calm morning light. Label readable. Label text, exactly: \"Oat & Honey Hand Lotion\" / \"Oat milk · Honey · Shea\" / \"8 oz pump\".",
+   "productName": "Oat & Honey Hand Lotion",
+   "group": "Lotions"
+  },
+  {
+   "filename": "oat-honey-hand-lotion-3-detail.png",
+   "productId": "oat-honey-hand-lotion",
+   "shot": "detail",
+   "prompt": "Detail shot. A small swirl of creamy white lotion on a matte ceramic dish beside the Oat & Honey Hand Lotion bottle, with rolled oats, a honey dipper and a small jar of honey arranged loosely on linen. Top-down at a slight angle, macro feel, soft light.",
+   "productName": "Oat & Honey Hand Lotion",
+   "group": "Lotions"
+  },
+  {
+   "filename": "lavender-body-lotion-1-hero.png",
+   "productId": "lavender-body-lotion",
+   "shot": "hero",
+   "prompt": "Product shot. One 8 oz matte amber glass pump bottle of Kind Flames lotion, labels fully legible, on a seamless warm off-white backdrop with a light oak surface. Soft window light. Label text, exactly: \"Lavender Body Lotion\" / \"French lavender · Chamomile · Shea\" / \"8 oz pump\". Square, sharp.",
+   "productName": "Lavender Body Lotion",
+   "group": "Lotions"
+  },
+  {
+   "filename": "lavender-body-lotion-2-lifestyle.png",
+   "productId": "lavender-body-lotion",
+   "shot": "lifestyle",
+   "prompt": "Lifestyle shot. The Lavender Body Lotion pump bottle on a bedside table with white linen and a sprig of lavender, next to the Kind Flames Lavender Dreams candle (same label system), unlit. Shallow depth of field, calm morning light. Label readable. Label text, exactly: \"Lavender Body Lotion\" / \"French lavender · Chamomile · Shea\" / \"8 oz pump\".",
+   "productName": "Lavender Body Lotion",
+   "group": "Lotions"
+  },
+  {
+   "filename": "lavender-body-lotion-3-detail.png",
+   "productId": "lavender-body-lotion",
+   "shot": "detail",
+   "prompt": "Detail shot. A small swirl of creamy white lotion on a matte ceramic dish beside the Lavender Body Lotion bottle, with dried lavender sprigs and chamomile flowers arranged loosely on linen. Top-down at a slight angle, macro feel, soft light.",
+   "productName": "Lavender Body Lotion",
+   "group": "Lotions"
+  },
+  {
+   "filename": "eucalyptus-recovery-soak-1-hero.png",
+   "productId": "eucalyptus-recovery-soak",
+   "shot": "hero",
+   "prompt": "Product shot. One 12 oz clear glass apothecary jar of Kind Flames bath salts with a cork lid and a small wooden scoop resting against it, filled with white and pale-green sea salt and epsom crystals flecked with dried eucalyptus leaf, label fully legible, on a seamless warm off-white backdrop with a white marble surface. Soft window light. Label text, exactly: \"Eucalyptus Recovery Soak\" / \"Eucalyptus · Spearmint · Sea salt\" / \"12 oz\". Square, sharp.",
+   "productName": "Eucalyptus Recovery Soak",
+   "group": "Bath salts"
+  },
+  {
+   "filename": "eucalyptus-recovery-soak-2-detail.png",
+   "productId": "eucalyptus-recovery-soak",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down. The Eucalyptus Recovery Soak jar open with salts spilling from the wooden scoop onto white marble: white and pale-green sea salt and epsom crystals flecked with dried eucalyptus leaf. fresh eucalyptus stems and a spearmint sprig placed loosely beside. Macro feel, soft light.",
+   "productName": "Eucalyptus Recovery Soak",
+   "group": "Bath salts"
+  },
+  {
+   "filename": "eucalyptus-recovery-soak-3-lifestyle.png",
+   "productId": "eucalyptus-recovery-soak",
+   "shot": "lifestyle",
+   "prompt": "Lifestyle shot. The Eucalyptus Recovery Soak jar on the edge of a filled white bathtub with a few salts dissolving in the water, a rolled white towel, and the Kind Flames Eucalyptus Mint candle (same label system) lit beside it. Evening light, steam softly visible. Labels readable.",
+   "productName": "Eucalyptus Recovery Soak",
+   "group": "Bath salts"
+  },
+  {
+   "filename": "rose-pink-salt-soak-1-hero.png",
+   "productId": "rose-pink-salt-soak",
+   "shot": "hero",
+   "prompt": "Product shot. One 12 oz clear glass apothecary jar of Kind Flames bath salts with a cork lid and a small wooden scoop resting against it, filled with pale pink Himalayan salt crystals with dried rose petals through it, label fully legible, on a seamless warm off-white backdrop with a white marble surface. Soft window light. Label text, exactly: \"Rose & Pink Salt Soak\" / \"Rose petal · Geranium · Pink salt\" / \"12 oz\". Square, sharp.",
+   "productName": "Rose & Pink Salt Soak",
+   "group": "Bath salts"
+  },
+  {
+   "filename": "rose-pink-salt-soak-2-detail.png",
+   "productId": "rose-pink-salt-soak",
+   "shot": "detail",
+   "prompt": "Detail shot, top-down. The Rose & Pink Salt Soak jar open with salts spilling from the wooden scoop onto white marble: pale pink Himalayan salt crystals with dried rose petals through it. dried rose petals and a geranium leaf placed loosely beside. Macro feel, soft light.",
+   "productName": "Rose & Pink Salt Soak",
+   "group": "Bath salts"
+  },
+  {
+   "filename": "rose-pink-salt-soak-3-lifestyle.png",
+   "productId": "rose-pink-salt-soak",
+   "shot": "lifestyle",
+   "prompt": "Lifestyle shot. The Rose & Pink Salt Soak jar on the edge of a filled white bathtub with a few salts dissolving in the water, a rolled white towel, and the Kind Flames Rose Garden candle (same label system) lit beside it. Evening light, steam softly visible. Labels readable.",
+   "productName": "Rose & Pink Salt Soak",
+   "group": "Bath salts"
+  },
+  {
+   "filename": "spa-night-set-1-hero.png",
+   "productId": "spa-night-set",
+   "shot": "hero",
+   "prompt": "Product shot. An open natural kraft gift box with the lid leaning behind it, cream crinkle paper inside, containing three Kind Flames products nestled together: an 8 oz Eucalyptus Mint candle jar (label: \"Eucalyptus Mint\" / \"Spearmint · Eucalyptus · Cedar\" / \"8 oz\"), a 12 oz apothecary jar of Eucalyptus Recovery Soak with cork lid (label: \"Eucalyptus Recovery Soak\" / \"Eucalyptus · Spearmint · Sea salt\" / \"12 oz\"), and an 8 oz amber pump bottle of Oat & Honey Hand Lotion (label: \"Oat & Honey Hand Lotion\" / \"Oat milk · Honey · Shea\" / \"8 oz pump\"). A cream card sealed with a cream Kind Flames monogram sticker tucked at the front. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.",
+   "productName": "Spa Night Set",
+   "group": "Gift sets"
+  },
+  {
+   "filename": "spa-night-set-2-flatlay.png",
+   "productId": "spa-night-set",
+   "shot": "flatlay",
+   "prompt": "Flat lay, top-down. The three Spa Night Set items (Eucalyptus Mint candle, Eucalyptus Recovery Soak jar, Oat & Honey Hand Lotion bottle) laid out on linen beside the empty kraft box and its lid, with a few eucalyptus stems, a rolled white towel and a wooden scoop. Labels readable, same label system. Soft even light.",
+   "productName": "Spa Night Set",
+   "group": "Gift sets"
+  },
+  {
+   "filename": "spa-night-set-3-gifting.png",
+   "productId": "spa-night-set",
+   "shot": "gifting",
+   "prompt": "Lifestyle shot. Hands (no face) tying a thin natural jute ribbon around the closed kraft Spa Night Set box, a small cream Kind Flames monogram sticker on the lid, on a light oak table with a sprig of eucalyptus beside it. Warm light, shallow depth of field.",
+   "productName": "Spa Night Set",
+   "group": "Gift sets"
+  },
+  {
+   "filename": "cozy-evening-trio-1-hero.png",
+   "productId": "cozy-evening-trio",
+   "shot": "hero",
+   "prompt": "Product shot. An open natural kraft gift box, lid leaning behind, cream crinkle paper, holding three 4 oz Kind Flames candle jars in a row with brushed gold lids on: labels read \"Cinnamon Spice\" / \"Orange peel · Cinnamon bark · Clove\" / \"4 oz\", \"Vanilla Bliss\" / \"Brown sugar · Madagascar vanilla · Sandalwood\" / \"4 oz\", and \"Pine Forest\" / \"Juniper · Nordic pine · Moss\" / \"4 oz\". A cream card with a cream Kind Flames monogram sticker at the front. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.",
+   "productName": "Cozy Evening Trio",
+   "group": "Gift sets"
+  },
+  {
+   "filename": "cozy-evening-trio-2-lit.png",
+   "productId": "cozy-evening-trio",
+   "shot": "lit",
+   "prompt": "Lifestyle shot. The three Cozy Evening Trio 4 oz candles (Cinnamon Spice, Vanilla Bliss, Pine Forest) out of the box and lit on a dark wooden table on a winter evening with a wool throw, dried orange slices and a small pine sprig. Labels readable. Warm candlelight, shallow depth of field.",
+   "productName": "Cozy Evening Trio",
+   "group": "Gift sets"
+  },
+  {
+   "filename": "cozy-evening-trio-3-gifting.png",
+   "productId": "cozy-evening-trio",
+   "shot": "gifting",
+   "prompt": "Lifestyle shot. The closed kraft Cozy Evening Trio box with a cream Kind Flames monogram sticker on the lid and a thin jute ribbon, a cinnamon stick tucked in the ribbon, on a plaid cloth under softly lit evergreen branches. Holiday mood, warm light.",
+   "productName": "Cozy Evening Trio",
+   "group": "Gift sets"
+  },
+  {
+   "filename": "corporate-sample-kit-1-hero.png",
+   "productId": "corporate-sample-kit",
+   "shot": "hero",
+   "prompt": "Product shot. An open natural kraft box, lid leaning behind, cream crinkle paper, containing three 4 oz Kind Flames candle jars with gold lids (labels: \"Lavender Dreams\" / \"Bergamot · French lavender · Tonka bean\" / \"4 oz\"; \"Pine Forest\" / \"Juniper · Nordic pine · Moss\" / \"4 oz\"; \"Vanilla Bliss\" / \"Brown sugar · Madagascar vanilla · Sandalwood\" / \"4 oz\"), a small 8 oz frosted jar of body scrub with bamboo lid (label: \"Brown Sugar & Vanilla Body Scrub\" / \"8 oz\"), and a small cream paper sachet of bath salts with a cream Kind Flames monogram sticker. A cream card at the front reads only \"Corporate Sample Kit\" in pine-green serif under the logo. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.",
+   "productName": "Corporate Sample Kit",
+   "group": "Gift sets"
+  },
+  {
+   "filename": "corporate-sample-kit-2-flatlay.png",
+   "productId": "corporate-sample-kit",
+   "shot": "flatlay",
+   "prompt": "Flat lay, top-down, on a clean white desk. The Corporate Sample Kit contents (three 4 oz candles, the scrub jar, the salt sachet) arranged in a neat grid beside the kraft box, a cream card reading \"Corporate Sample Kit\" under the black logo, a fountain pen and a closed notebook at the edge. Even soft light, business-gift mood.",
+   "productName": "Corporate Sample Kit",
+   "group": "Gift sets"
+  }
+ ]
+}

@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDocs, orderBy, query, setDoc, serverTimestamp, writeBatch, limit } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, serverTimestamp, writeBatch, limit } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../config/firebase';
 import { LOCAL_CATALOG } from '../lib/catalog';
@@ -40,4 +40,8 @@ export const deleteReview = (id: string) => deleteDoc(doc(db, 'reviews', id));
 export async function listNewsletter(): Promise<{ email: string; createdAt?: { seconds: number } }[]> { const s = await getDocs(collection(db, 'newsletter')); return s.docs.map((d) => ({ email: d.id, ...(d.data() as { createdAt?: { seconds: number } }) })); }
 export interface MarketingContact { email: string; firstName?: string; source: 'newsletter' | 'order'; welcomeStage: number; unsubscribed: boolean; resend?: { contactId: string | null; syncedAt?: { seconds: number } } | null; lastOrderAt?: { seconds: number } | null; createdAt?: { seconds: number } | null }
 export async function listMarketing(): Promise<MarketingContact[]> { const s = await getDocs(query(collection(db, 'marketing'), orderBy('createdAt', 'desc'), limit(500))); return s.docs.map((d) => ({ email: d.id, ...(d.data() as Omit<MarketingContact, 'email'>) })); }
+export interface ImagePromptShot { filename: string; productId: string; productName: string; group: string; shot: string; prompt: string }
+export interface ImagePrompts { version: number; howTo: string; brand: string; shots: ImagePromptShot[]; updatedAt?: { seconds: number } | null }
+export async function loadImagePrompts(): Promise<ImagePrompts | null> { const s = await getDoc(doc(db, 'content', 'imagePrompts')); return s.exists() ? (s.data() as ImagePrompts) : null; }
+export const saveImagePrompts = (p: ImagePrompts) => setDoc(doc(db, 'content', 'imagePrompts'), { ...p, updatedAt: serverTimestamp() });
 

@@ -75,6 +75,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Admin-edited content (image prompt pack etc.). Admin only.
+    match /content/{doc} {
+      allow read, write: if isAdmin();
+    }
+
     // Marketing contacts (welcome/care/reorder state, unsubscribe). Written by Cloud Functions; admins read.
     match /marketing/{email} {
       allow read: if isAdmin();
