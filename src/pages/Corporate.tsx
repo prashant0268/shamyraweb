@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useCatalog } from '../context/CatalogContext';
 import { useToast } from '../context/ToastContext';
 import { submitQuote, errorMessage } from '../services/api';
+import { money } from '../lib/format';
 import { useSeo } from '../lib/seo';
 import { track } from '../lib/analytics';
 import Button from '../components/ui/Button';
@@ -24,14 +26,16 @@ const CUSTOM = ['Logo label', 'Custom sleeve', 'Card insert', 'Custom scent'];
 
 export default function Corporate() {
   useSeo({ title: 'Corporate gifting', description: 'Hand-poured candles and spa sets with your logo. Tiered pricing from 25 units, multi-address shipping, Net-30 invoicing.', path: '/corporate' });
-  const { products } = useCatalog();
+  const { products, byId } = useCatalog();
   const { add } = useCart();
   const toast = useToast();
   const [f, setF] = useState({ name: '', company: '', email: '', phone: '', quantity: 50, budget: '$20–30', neededBy: '', product: 'Pine Forest 8 oz candle', customization: ['Logo label'] as string[], shippingMode: 'One address', notes: '' });
   const [busy, setBusy] = useState(false); const [done, setDone] = useState(false); const [error, setError] = useState('');
   const [recipients, setRecipients] = useState<Recipient[]>([]); const [csvErrors, setCsvErrors] = useState<string[]>([]);
   const onCsv = (file: File | null) => { if (!file) return; file.text().then((t) => { const { rows, errors } = parseCsv(t); setRecipients(rows); setCsvErrors(errors); if (rows.length) setF((x) => ({ ...x, shippingMode: 'Multiple addresses (list attached)' })); }); };
-  const sample = products.find((p) => p.id === 'spa-night-set');
+  const kit = byId('corporate-sample-kit');
+  const sample = kit || products.find((p) => p.id === 'spa-night-set');
+  const addKit = () => { if (!kit) return; add(kit.id, kit.variants[0]!.id); track('add_to_cart', { items: [{ item_id: kit.id, item_name: kit.name }], value: kit.variants[0]!.price }); toast('Sample kit added — credited on your first corporate order'); };
   const hero = products.find((p) => p.id === 'pine-forest');
 
   const submit = async (e: FormEvent) => {
@@ -44,7 +48,7 @@ export default function Corporate() {
     <div className="wrap py-8">
       <section className="grid items-center gap-8 pb-10 md:grid-cols-2">
         <div className="space-y-4"><div className="eyebrow">Corporate &amp; bulk gifting</div><h1 className="text-4xl sm:text-5xl">Gifts people actually keep on their desk.</h1><p className="max-w-[48ch] text-lg text-muted">Hand-poured candles and spa sets with your logo on the label or a card inside. From 25 units. Ship to your office or straight to each recipient.</p>
-          <div className="flex flex-wrap gap-3"><Button variant="accent" size="lg" href="#quote">Request a quote</Button>{sample && <Button variant="ghost" size="lg" onClick={() => { add(sample.id, sample.variants[0]!.id); toast('Sample set added — credited on your first corporate order'); }}>Order a sample set</Button>}</div>
+          <div className="flex flex-wrap gap-3"><Button variant="accent" size="lg" href="#quote">Request a quote</Button>{sample && <Button variant="ghost" size="lg" onClick={() => { if (kit) addKit(); else { add(sample.id, sample.variants[0]!.id); toast('Sample set added — credited on your first corporate order'); } }}>{kit ? 'Order a sample kit' : 'Order a sample set'}</Button>}</div>
           <p className="text-sm text-muted">Sample cost is credited on your first order. Typical lead time 10 business days; custom labels 15.</p></div>
         {hero && <div className="overflow-hidden rounded-3xl bg-surface-2"><ProductImage product={hero} size={800} className="aspect-[4/3] w-full" /></div>}
       </section>
@@ -53,6 +57,25 @@ export default function Corporate() {
         <div className="grid gap-4 sm:grid-cols-3">{[['Starter', '25–49', '10% off retail', 'Branded card insert · one ship-to address', false], ['Team', '50–99', '15% off retail', 'Custom label or sleeve · up to 10 addresses', true], ['Company', '100+', '20% off + free design', 'Full custom branding · CSV multi-address shipping · Net-30 invoicing', false]].map(([t, n, d, s, hi]) => (
           <div key={t as string} className={`card space-y-1 p-5 ${hi ? 'border-honey shadow-lg' : ''}`}><div className="eyebrow">{t}</div><div className="font-display text-4xl font-bold">{n}</div><div className="font-semibold">{d}</div><div className="text-sm text-muted">{s}</div></div>
         ))}</div></section>
+
+      <section className="py-8" id="sample-kit" aria-labelledby="sample-kit-title">
+        <div className="card grid items-center gap-6 overflow-hidden p-0 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <Link to="/product/corporate-sample-kit" className="block h-full w-full bg-surface-2">{kit ? <ProductImage product={kit} size={800} className="aspect-square h-full w-full sm:aspect-[4/3] md:aspect-auto" /> : <div className="aspect-square w-full sm:aspect-[4/3]" />}</Link>
+          <div className="space-y-3 p-6 pt-0 md:py-8 md:pr-8">
+            <div className="eyebrow">Try before you order</div>
+            <h2 id="sample-kit-title" className="text-3xl">Corporate Sample Kit</h2>
+            <p className="max-w-[52ch] text-muted">Three mini candles plus a body scrub and a bath-salt sachet, so your team can check scent, burn and packaging before committing. Ships in 1–2 business days.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="num text-2xl font-bold">{money(kit?.variants[0]?.price ?? 25)}</span>
+              <span className="text-sm text-muted">credited back on your first order of 25+ units</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {kit ? <Button variant="accent" onClick={addKit}>Add sample kit to bag</Button> : <Button variant="accent" href="#quote">Ask for a sample in your quote</Button>}
+              <Button variant="ghost" to="/product/corporate-sample-kit">What's inside</Button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="py-8"><div className="mb-5"><div className="eyebrow">How it works</div><h2 className="text-3xl">Quote to doorstep</h2></div>
         <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[['Tell us the occasion', 'Quantity, budget, date, and whether you want our scents or a custom blend.'], ['Quote in 1 business day', 'With a mock-up of the label or card.'], ['Approve & pay', 'Card, ACH, or Net-30 invoice for approved accounts.'], ['We pour, pack, ship', 'Upload a recipient list and we handle every address. Each box carries a QR code offering recipients 15% off.']].map(([t, d], i) => (

@@ -17,8 +17,8 @@ Catalog in Firestore with 5 categories · product detail pages · search/filter 
 | 3 | Holiday gift guide page `/gifts` (by recipient and budget, bundle builder CTA) | dev | todo | Parallel-safe: new page + nav link. |
 | 4 | Google Merchant Center product feed (`/feed.xml` generated at build) + site verification | dev | todo | Parallel-safe. You claim the Merchant Center account and submit the feed URL. |
 | 5 | Meta Pixel + Conversions API alongside GA4 events | dev | todo | Needs your Pixel ID. Goes with #4 (same files). |
-| 6 | Per-product JSON-LD (Product, Offer, AggregateRating) on product pages | dev | todo | Parallel-safe: ProductDetail only. |
-| 7 | Corporate sample kit SKU ($25, credited on first bulk order) | dev | todo | Parallel-safe: catalog + corporate page. Goes with #6. |
+| 6 | Per-product JSON-LD (Product, Offer, AggregateRating) on product pages | dev | review | Done on branch `claude/jovial-elgamal-16d765` (Product + Offer/AggregateOffer + AggregateRating/Review when approved reviews exist). Deploy with hosting. |
+| 7 | Corporate sample kit SKU ($25, credited on first bulk order) | dev | review | Done on branch `claude/jovial-elgamal-16d765`: SKU `corporate-sample-kit` ($25, hidden from listings) + "Try before you order" block on /corporate. After deploy: Admin → Products → "Add missing defaults" so Firestore gets the SKU. |
 | 8 | Chrome cache / disk cleanup so builds and deploys keep working | you | done | 9 GB free as of Oct 15. |
 
 ## Next — repeat purchases

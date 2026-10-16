@@ -18,6 +18,8 @@ export async function loadProducts(): Promise<{ products: Product[]; source: 'fi
 }
 
 export const activeOnly = (ps: Product[]) => ps.filter((p) => p.active !== false);
+/** Active products that belong in public listings; `hidden` ones stay reachable by URL and purchasable. */
+export const listed = (ps: Product[]) => activeOnly(ps).filter((p) => !p.hidden);
 export const byCategory = (ps: Product[], c: Category | 'all' | 'body') => c === 'all' ? ps : c === 'body' ? ps.filter((p) => ['scrub', 'lotion', 'salt'].includes(p.category)) : ps.filter((p) => p.category === c);
 export const inStock = (p: Product) => p.variants.some((v) => typeof v.stock !== 'number' || v.stock > 0);
 export const minPrice = (p: Product) => Math.min(...p.variants.map((v) => v.price));
