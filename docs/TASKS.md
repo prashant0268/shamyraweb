@@ -12,7 +12,7 @@ Catalog in Firestore with 5 categories · product detail pages · search/filter 
 
 | # | Task | Owner | Status | Notes |
 |---|------|-------|--------|-------|
-| 1 | Real product photos (one lifestyle shot per candle, group shot per set) | you | todo | Upload via Admin → Products. Biggest conversion lever. |
+| 1 | Real product photos (one lifestyle shot per candle, group shot per set) | you | in progress | Generating with Gemini from `docs/IMAGE_PROMPTS.md` (74 shots, exact filenames). Send dev the folder; dev crops, converts to WebP and uploads. |
 | 2 | Enable Apple Pay, Google Pay, Link (and Klarna/Affirm) in Stripe → Settings → Payment methods | you | todo | Checkout picks them up automatically. |
 | 3 | Holiday gift guide page `/gifts` (by recipient and budget, bundle builder CTA) | dev | done | Live Oct 15. Linked from header, drawer and footer; in sitemap. Order-by dates are constants at the top of `src/pages/Gifts.tsx`. |
 | 4 | Google Merchant Center product feed (`/feed.xml` generated at build) + site verification | dev / you | review | Live: https://kindflames.com/feed.xml (46 items, hidden SKUs excluded). You: claim kindflames.com in Merchant Center (paste the verification token into `index.html`, tell dev to deploy), add the feed URL with daily fetch, set shipping/returns/tax. See HANDOFF → Google Merchant Center. |
@@ -25,7 +25,7 @@ Catalog in Firestore with 5 categories · product detail pages · search/filter 
 
 | # | Task | Owner | Status | Notes |
 |---|------|-------|--------|-------|
-| 9 | Marketing email: sync newsletter + customers to Resend Audiences; welcome series, post-purchase care tips, 45-day reorder nudge | dev / you | review | Functions + rules live Oct 15 (`functions/marketing.js`, daily `marketingDrip` 10:00 ET, `/api/unsubscribe`). **Hosting deploy pending** for the unsubscribe rewrite + Admin → Newsletter buttons: `firebase deploy --only hosting --project shamyra-web`. Then you: Admin → Newsletter → "Send me test emails", then "Sync to Resend audience". See HANDOFF → Marketing email. |
+| 9 | Marketing email: sync newsletter + customers to Resend Audiences; welcome series, post-purchase care tips, 45-day reorder nudge | dev / you | review | Fully live Oct 16 (`functions/marketing.js`, daily `marketingDrip` 10:00 ET, `/api/unsubscribe`). You: Admin → Newsletter → "Send me test emails", then "Sync to Resend audience". See HANDOFF → Marketing email. |
 | 10 | Referral codes: share link = 10% for a friend, $5 credit for the referrer | dev | todo | functions + checkout + account. |
 | 11 | Weekly owner digest (sales, top products, recovered carts) + low-stock alerts | dev | todo | functions scheduler. |
 | 12 | Stripe webhook enabled (`STRIPE_WEBHOOK_SECRET` + `features.json`) | dev / you | todo | You create the endpoint in Stripe; dev flips the flag and deploys. |
