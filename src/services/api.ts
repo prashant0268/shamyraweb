@@ -34,3 +34,5 @@ export const errorMessage = (e: unknown, fallback = 'Something went wrong. Pleas
   if (err?.message && !/^(internal|unknown)$/i.test(err.message)) return err.message.replace(/^Firebase: /, '');
   return fallback;
 };
+export const syncMarketingAudience = call<Record<string, never>, { newsletter: number; orders: number; contacts: number; synced: number; failed: number; audienceId: string | null }>('syncMarketingAudience');
+export const sendMarketingTest = call<Record<string, never>, { sent: { name: string; ok: boolean; reason: string | null }[] }>('sendMarketingTest');

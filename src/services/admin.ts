@@ -38,3 +38,6 @@ export const setReviewApproved = (id: string, approved: boolean) => setDoc(doc(d
 export const deleteReview = (id: string) => deleteDoc(doc(db, 'reviews', id));
 
 export async function listNewsletter(): Promise<{ email: string; createdAt?: { seconds: number } }[]> { const s = await getDocs(collection(db, 'newsletter')); return s.docs.map((d) => ({ email: d.id, ...(d.data() as { createdAt?: { seconds: number } }) })); }
+export interface MarketingContact { email: string; firstName?: string; source: 'newsletter' | 'order'; welcomeStage: number; unsubscribed: boolean; resend?: { contactId: string | null; syncedAt?: { seconds: number } } | null; lastOrderAt?: { seconds: number } | null; createdAt?: { seconds: number } | null }
+export async function listMarketing(): Promise<MarketingContact[]> { const s = await getDocs(query(collection(db, 'marketing'), orderBy('createdAt', 'desc'), limit(500))); return s.docs.map((d) => ({ email: d.id, ...(d.data() as Omit<MarketingContact, 'email'>) })); }
+

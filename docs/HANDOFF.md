@@ -52,3 +52,20 @@
 - Set `VITE_META_PIXEL_ID=<15–16 digit id>` in `.env.production` (Events Manager → Data sources → your pixel → Settings → Pixel ID), rebuild and deploy. When the variable is empty the pixel is not loaded at all and no `fbq` calls run.
 - Events mirror GA4 from `src/lib/analytics.ts`: `view_item`→ViewContent, `add_to_cart`→AddToCart, `add_to_wishlist`→AddToWishlist, `begin_checkout`→InitiateCheckout, `purchase`→Purchase (value, USD; plus Subscribe for Stripe subscriptions), newsletter `sign_up`→Lead, corporate quote `generate_lead`→Lead. PageView fires once on load (single-page app: route changes are not sent as extra PageViews).
 - Verify with the Meta Pixel Helper Chrome extension or Events Manager → Test events on the live site. Purchase events carry an `eventID` of `purchase:<order number>` for deduplication once the Conversions API is added server side (follow-up, task #5 in `docs/TASKS.md`).
+
+## Marketing email (added 2026-10-15)
+
+Automatic flows, all sent through Resend from orders@kindflames.com and all carrying a one-click unsubscribe link (`/api/unsubscribe`, also as a `List-Unsubscribe` header so Gmail shows its own button):
+
+- **Welcome series** for newsletter signups: #1 immediately (with `WELCOME10` if that discount exists and is active), #2 three days later (how the candles are made + bestsellers), #3 four days after that (gift guide + code reminder).
+- **Care tips** two days after an order is marked shipped, with sections for whatever categories were in the box.
+- **Reorder nudge** 45 days after purchase, listing what they bought, unless they have ordered again since. Subscription shipments are excluded.
+- The abandoned-bag reminder now respects unsubscribes too.
+
+Where things live: `functions/marketing.js` (templates and timing; the `TIMING` constant at the top), state in Firestore `marketing/{email}` (Admin → Newsletter shows it), scheduler `marketingDrip` runs daily at 10:00 ET.
+
+**You:**
+1. Admin → Newsletter → **Send me test emails** to read all five templates in your inbox. Tell dev what to change.
+2. Admin → Newsletter → **Sync to Resend audience** once. This imports past subscribers and customers as contacts and creates the “Kind Flames customers” audience in Resend (id stored server-side). New signups and buyers are added automatically from now on. Use Resend → Broadcasts for one-off campaigns to that audience.
+3. Create `WELCOME10` in Admin → Discounts if you haven't; the welcome email checks for it and leaves the code out when missing.
+

@@ -74,5 +74,15 @@ service cloud.firestore {
     match /counters/{doc} {
       allow read, write: if false;
     }
+
+    // Marketing contacts (welcome/care/reorder state, unsubscribe). Written by Cloud Functions; admins read.
+    match /marketing/{email} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    // Server-side config (Resend audience id). Never exposed.
+    match /system/{doc} {
+      allow read, write: if false;
+    }
   }
 }

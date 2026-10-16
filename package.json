@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "npm run build && firebase deploy",
-    "test": "node functions/scripts/test-pricing-unit.mjs",
+    "test": "node functions/scripts/test-pricing-unit.mjs && node functions/scripts/test-marketing-unit.mjs",
     "test:emulator": "npx -y firebase-tools@15 emulators:exec --project shamyra-web --only functions,firestore \"node functions/scripts/test-pricing.mjs\"",
     "smoke": "node scripts/smoke.mjs"
   },

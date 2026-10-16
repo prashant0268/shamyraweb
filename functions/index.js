@@ -7,7 +7,7 @@
  * written only by these functions, never by the client.
  */
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentWritten, onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { initializeApp } = require("firebase-admin/app");
@@ -17,6 +17,7 @@ const Stripe = require("stripe");
 const { Client, Environment, OrdersController, PaymentsController } = require("@paypal/paypal-server-sdk");
 const CATALOG = require("./catalog.json");
 const { priceCart: pricePure, round2, cents, fmt, PricingError } = require("./pricing");
+const { createMarketing } = require("./marketing");
 
 initializeApp();
 const db = getFirestore();
@@ -139,6 +140,7 @@ async function markOrderPaid(orderId, payment) {
     await db.doc(`discounts/${result.order.discount.code}`).set({ usageCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
   }
   await Promise.all([sendOrderConfirmation(result.order), sendOwnerNewOrder(result.order)]).catch((e) => console.error("email failed", e.message));
+  await marketing.onOrderPaid(result.order).catch((e) => console.error("marketing contact failed", e.message));
   return result.order;
 }
 
@@ -304,6 +306,7 @@ exports.updateOrderStatus = onCall({ cors: true, secrets: MAIL_SECRETS }, async 
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
   const update = { status, updatedAt: FieldValue.serverTimestamp() };
+  if (status === "shipped" && !snap.data().shippedAt) update.shippedAt = FieldValue.serverTimestamp();
   if (tracking) update.tracking = { carrier: String(tracking.carrier || "").slice(0, 40), number: String(tracking.number || "").slice(0, 60), url: trackingUrl(tracking) };
   if (typeof internalNotes === "string") update.internalNotes = internalNotes.slice(0, 2000);
   await ref.update(update);
@@ -543,6 +546,7 @@ exports.abandonedCartReminder = onSchedule({ schedule: "every day 15:00", timeZo
     const o = d.data();
     const age = now - (o.createdAt?.toMillis ? o.createdAt.toMillis() : now);
     if (o.reminderSent || !o.email || age < 3600e3 || age > 3 * 864e5) continue;
+    if (await marketing.isUnsubscribed(o.email)) { await d.ref.update({ reminderSent: true }); continue; }
     await sendMail({ to: o.email, subject: "Your Kind Flames bag is waiting", html: wrapEmail(`<h2>Still thinking it over?</h2><p>You left ${o.items.map((i) => esc(i.name)).join(", ")} in your bag. It's saved for you.</p><p><a href="${SITE_URL}/checkout">Finish checking out</a> — free shipping over $60.</p>`) }).catch(() => {});
     await d.ref.update({ reminderSent: true });
     sent++;
@@ -558,12 +562,12 @@ async function sendReviewRequest(order) {
 
 /* --------------------------------- email --------------------------------- */
 /** Sends via Resend when enabled; otherwise queues in Firestore `mail/` (Trigger Email format). Returns a status summary. */
-async function sendMail({ to, subject, html, text }) {
+async function sendMail({ to, subject, html, text, headers }) {
   if (!to) return { ok: false, via: "none", reason: "no recipient" };
   if (ENABLE_RESEND) {
     if (!process.env.RESEND_API_KEY) { console.error("ENABLE_RESEND is true but RESEND_API_KEY is not bound"); return { ok: false, via: "resend", reason: "secret not bound" }; }
     try {
-      const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: FROM_EMAIL, to: [to], reply_to: ENV.REPLY_TO || "hello@kindflames.com", subject, html, text }) });
+      const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: FROM_EMAIL, to: [to], reply_to: ENV.REPLY_TO || "hello@kindflames.com", subject, html, text, headers: headers || undefined }) });
       const body = await r.text();
       if (!r.ok) { console.error("resend error", r.status, body); return { ok: false, via: "resend", status: r.status, reason: body.slice(0, 300) }; }
       return { ok: true, via: "resend", id: (() => { try { return JSON.parse(body).id; } catch { return null; } })() };
@@ -605,3 +609,35 @@ function publicOrder(o) {
   const { payment, internalNotes, ...rest } = o;
   return { ...rest, createdAt: rest.createdAt?.toMillis ? rest.createdAt.toMillis() : rest.createdAt || null, paidAt: rest.paidAt?.toMillis ? rest.paidAt.toMillis() : null, updatedAt: null };
 }
+
+/* ------------------------------ marketing email ----------------------------- */
+// Flows live in marketing.js: welcome series on newsletter signup, care tips after shipping,
+// 45-day reorder nudge, Resend audience sync, one-click unsubscribe (hosting rewrites /api/unsubscribe here).
+const marketing = createMarketing({ db, FieldValue, sendMail, wrapEmail, esc, fmt, getProduct, CATALOG, SITE_URL, ENV });
+
+exports.onNewsletterSignup = onDocumentCreated({ document: "newsletter/{email}", secrets: MAIL_SECRETS }, async (event) => {
+  const email = event.params.email;
+  await marketing.onNewsletterSignup(email, event.data?.data() || {}).catch((e) => console.error("newsletter welcome failed", email, e.message));
+});
+
+exports.marketingDrip = onSchedule({ schedule: "every day 10:00", timeZone: "America/New_York", secrets: MAIL_SECRETS }, async () => {
+  await marketing.runDrip();
+});
+
+exports.unsubscribe = onRequest({ secrets: MAIL_SECRETS }, async (req, res) => {
+  if (!["GET", "POST"].includes(req.method)) return res.status(405).send("Method not allowed");
+  try { await marketing.handleUnsubscribe(req, res); }
+  catch (e) { console.error("unsubscribe failed", e.message); res.status(500).send("Something went wrong. Reply to any Kind Flames email and we'll remove you by hand."); }
+});
+
+exports.syncMarketingAudience = onCall({ cors: true, secrets: MAIL_SECRETS }, async (request) => {
+  requireAdmin(request);
+  return marketing.syncAudience();
+});
+
+exports.sendMarketingTest = onCall({ cors: true, secrets: MAIL_SECRETS }, async (request) => {
+  requireAdmin(request);
+  const to = request.auth?.token?.email;
+  if (!to) throw new HttpsError("failed-precondition", "Your account has no email address.");
+  return marketing.sendTestEmails(to);
+});
