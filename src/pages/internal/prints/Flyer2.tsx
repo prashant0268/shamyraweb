@@ -1,7 +1,7 @@
 import { QRCodeSVG } from "qrcode.react";
 
 // Import logo
-import logo from "../../../assets/images/logo/Color-Logo-Transparent-Background.png";
+import logo from "../../../assets/images/logo/kf-mark.png";
 
 // Import candle images
 const candle1 = '/img/products/lavender-dreams-800.webp';

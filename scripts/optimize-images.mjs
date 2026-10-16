@@ -15,11 +15,5 @@ for (const [src, slug] of Object.entries(MAP)) {
   console.log('ok', slug);
 }
 await sharp('src/assets/background/background.jpg').resize(1600).webp({ quality: 70 }).toFile('public/img/background.webp');
-await sharp('src/assets/images/logo/Color-Logo-Transparent-Background.png').resize(512, 512, { fit: 'inside' }).png().toFile('public/img/logo-512.png');
-await sharp('src/assets/images/logo/Color-Logo-Transparent-Background.png').resize(64, 64, { fit: 'inside' }).png().toFile('public/favicon.png');
-await sharp('src/assets/images/logo/Color-Logo-Transparent-Background.png').resize(180, 180, { fit: 'inside' }).png().toFile('public/apple-touch-icon.png');
-// OG image: logo on a dark pine background
-await sharp({ create: { width: 1200, height: 630, channels: 4, background: '#214238' } })
-  .composite([{ input: await sharp('src/assets/images/logo/Color-Logo-Transparent-Background.png').resize(520, 520, { fit: 'inside' }).toBuffer(), gravity: 'center' }])
-  .jpeg({ quality: 85 }).toFile('public/img/og.jpg');
+// Logo, favicon, apple-touch-icon and og.jpg are built by scripts/brand-assets.mjs.
 console.log('done');

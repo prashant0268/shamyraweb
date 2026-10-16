@@ -10,7 +10,8 @@ export default function Footer() {
     <footer className="mt-16 border-t border-line bg-surface text-sm">
       <div className="wrap grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-5">
         <div className="lg:col-span-1">
-          <div className="font-display text-xl font-bold">Kind Flames</div>
+          <img src="/img/logo-lockup.png" alt="Kind Flames" width="160" height="109" className="h-auto w-40" loading="lazy" />
+          <p className="mt-3 font-display italic text-ink">Light Beyond Fragrance.</p>
           <p className="mt-2 max-w-xs text-muted">Hand-poured candles and small-batch bath &amp; body, made in New Jersey.</p>
         </div>
         {col('Shop', [['/shop/candle', 'Candles'], ['/shop/scrub', 'Body Scrubs'], ['/shop/lotion', 'Lotions'], ['/shop/salt', 'Bath Salts'], ['/shop/set', 'Gift Sets'], ['/gifts', 'Holiday Gift Guide'], ['/build-a-set', 'Build a Spa Set'], ['/subscribe', 'Candle of the Month']])}

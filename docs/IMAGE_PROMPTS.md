@@ -5,7 +5,7 @@ Generated 2026-10-16 from `src/data/catalog.json`. 74 shots across 21 products.
 ## How to use
 
 1. Open Gemini (gemini.google.com, or Google AI Studio with the image model) and start **one new chat per product**.
-2. **Attach the logo file** `public/img/logo-512.png` to the first message of each chat (also at https://kindflames.com/img/logo-512.png). Gemini copies it onto the labels.
+2. **Attach the logo file** `public/img/logo-lockup.png` to the first message of each chat (also at https://kindflames.com/img/logo-lockup.png once deployed). It's the black KF monogram with the KINDFLAMES wordmark on a transparent background; Gemini copies it onto the labels.
 3. Paste the **Brand style block** below as the first message, with the logo attached. Then send each shot prompt as its own message.
 4. Settings: square **1:1** aspect ratio, highest quality available. Generate 2–4 candidates per shot and keep the best one.
 5. Label text is the part AI gets wrong most. If a label is misspelled or garbled, reply "Regenerate; the label must read exactly: …" with the text again. Don't chase perfection on the small 4 oz jars in the lineup shots.
@@ -18,14 +18,14 @@ You are producing product photography for Kind Flames, a small hand-poured candl
 
 STYLE: real photograph, not an illustration. Natural soft daylight from a window on the left, gentle shadows, shallow depth of field on lifestyle shots and sharp front-to-back on product shots. Calm, warm, minimal. No people's faces. No extra text anywhere in the scene except the product labels described below. Colour palette: warm off-white (#F3F1EC), deep pine green (#214238), honey gold (#C68A1E), natural kraft, linen, light oak wood, white marble, matte ceramic. Nothing glossy or neon.
 
-LOGO: the attached image is the Kind Flames logo (a thin gold hand-drawn circle with a small flame-in-circle mark and the words "kind flames" in lowercase gold). Reproduce it faithfully on every label, centred at the top of the label, in gold on the cream label. Do not redraw or restyle it.
+LOGO: the attached image is the Kind Flames logo: a black "KF" monogram where the stem of the F is a flame, with the wordmark KINDFLAMES in widely spaced black capitals beneath it. Reproduce it faithfully on every label, centred at the top of the label, in black on the cream label. On small labels (4 oz jars, travel tube, sachets) use just the KF monogram without the wordmark. Do not redraw, recolour or restyle it.
 
 PACKAGING SYSTEM (use the same every time):
-- Candles: straight-sided clear glass tumbler jar, natural off-white soy wax (no colour in the wax), a brushed gold metal lid shown beside or behind the jar. Label: a matte cream (#F3F1EC) rectangular paper label wrapped on the front of the jar with the logo at the top, the product name in an elegant serif (like Fraunces) in pine green, the three fragrance notes in small sans-serif below separated by small dots, and the size in small text at the bottom.
+- Candles: straight-sided clear glass tumbler jar, natural off-white soy wax (no colour in the wax), a brushed gold metal lid shown beside or behind the jar. Label: a matte cream (#F3F1EC) rectangular paper label wrapped on the front of the jar with the logo at the top, the product name in an elegant serif (like Fraunces) in black, the three fragrance notes in small sans-serif below separated by small dots, and the size in small text at the bottom. A thin honey-gold rule under the product name is the only colour on the label.
 - Body scrubs: wide-mouth frosted glass jar with a bamboo screw lid. Same cream label system with name, notes, size.
 - Lotions: matte amber glass pump bottle (8 oz) and a small matte white travel tube (2 oz) where mentioned. Same cream label system.
 - Bath salts: clear glass apothecary jar with a cork lid and a small wooden scoop. Same cream label system.
-- Gift sets: a natural kraft box with a lift-off lid, cream crinkle paper, a gold Kind Flames sticker (the logo) sealing a cream card.
+- Gift sets: a natural kraft box with a lift-off lid, cream crinkle paper, a cream round sticker printed with the black KF monogram sealing a cream card.
 
 Reply "Ready" and wait for the shot prompts.
 ```
@@ -477,7 +477,7 @@ Lifestyle shot. The Rose & Pink Salt Soak jar on the edge of a filled white bath
 **`spa-night-set-1-hero.png`**
 
 ```
-Product shot. An open natural kraft gift box with the lid leaning behind it, cream crinkle paper inside, containing three Kind Flames products nestled together: an 8 oz Eucalyptus Mint candle jar (label: "Eucalyptus Mint" / "Spearmint · Eucalyptus · Cedar" / "8 oz"), a 12 oz apothecary jar of Eucalyptus Recovery Soak with cork lid (label: "Eucalyptus Recovery Soak" / "Eucalyptus · Spearmint · Sea salt" / "12 oz"), and an 8 oz amber pump bottle of Oat & Honey Hand Lotion (label: "Oat & Honey Hand Lotion" / "Oat milk · Honey · Shea" / "8 oz pump"). A cream card sealed with a gold Kind Flames logo sticker tucked at the front. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.
+Product shot. An open natural kraft gift box with the lid leaning behind it, cream crinkle paper inside, containing three Kind Flames products nestled together: an 8 oz Eucalyptus Mint candle jar (label: "Eucalyptus Mint" / "Spearmint · Eucalyptus · Cedar" / "8 oz"), a 12 oz apothecary jar of Eucalyptus Recovery Soak with cork lid (label: "Eucalyptus Recovery Soak" / "Eucalyptus · Spearmint · Sea salt" / "12 oz"), and an 8 oz amber pump bottle of Oat & Honey Hand Lotion (label: "Oat & Honey Hand Lotion" / "Oat milk · Honey · Shea" / "8 oz pump"). A cream card sealed with a cream Kind Flames monogram sticker tucked at the front. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.
 ```
 
 **`spa-night-set-2-flatlay.png`**
@@ -489,7 +489,7 @@ Flat lay, top-down. The three Spa Night Set items (Eucalyptus Mint candle, Eucal
 **`spa-night-set-3-gifting.png`**
 
 ```
-Lifestyle shot. Hands (no face) tying a thin natural jute ribbon around the closed kraft Spa Night Set box, a small gold Kind Flames logo sticker on the lid, on a light oak table with a sprig of eucalyptus beside it. Warm light, shallow depth of field.
+Lifestyle shot. Hands (no face) tying a thin natural jute ribbon around the closed kraft Spa Night Set box, a small cream Kind Flames monogram sticker on the lid, on a light oak table with a sprig of eucalyptus beside it. Warm light, shallow depth of field.
 ```
 
 ### Cozy Evening Trio ($36)
@@ -497,7 +497,7 @@ Lifestyle shot. Hands (no face) tying a thin natural jute ribbon around the clos
 **`cozy-evening-trio-1-hero.png`**
 
 ```
-Product shot. An open natural kraft gift box, lid leaning behind, cream crinkle paper, holding three 4 oz Kind Flames candle jars in a row with brushed gold lids on: labels read "Cinnamon Spice" / "Orange peel · Cinnamon bark · Clove" / "4 oz", "Vanilla Bliss" / "Brown sugar · Madagascar vanilla · Sandalwood" / "4 oz", and "Pine Forest" / "Juniper · Nordic pine · Moss" / "4 oz". A cream card with a gold Kind Flames logo sticker at the front. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.
+Product shot. An open natural kraft gift box, lid leaning behind, cream crinkle paper, holding three 4 oz Kind Flames candle jars in a row with brushed gold lids on: labels read "Cinnamon Spice" / "Orange peel · Cinnamon bark · Clove" / "4 oz", "Vanilla Bliss" / "Brown sugar · Madagascar vanilla · Sandalwood" / "4 oz", and "Pine Forest" / "Juniper · Nordic pine · Moss" / "4 oz". A cream card with a cream Kind Flames monogram sticker at the front. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.
 ```
 
 **`cozy-evening-trio-2-lit.png`**
@@ -509,7 +509,7 @@ Lifestyle shot. The three Cozy Evening Trio 4 oz candles (Cinnamon Spice, Vanill
 **`cozy-evening-trio-3-gifting.png`**
 
 ```
-Lifestyle shot. The closed kraft Cozy Evening Trio box with a gold Kind Flames logo sticker on the lid and a thin jute ribbon, a cinnamon stick tucked in the ribbon, on a plaid cloth under softly lit evergreen branches. Holiday mood, warm light.
+Lifestyle shot. The closed kraft Cozy Evening Trio box with a cream Kind Flames monogram sticker on the lid and a thin jute ribbon, a cinnamon stick tucked in the ribbon, on a plaid cloth under softly lit evergreen branches. Holiday mood, warm light.
 ```
 
 ### Corporate Sample Kit ($25, hidden from the shop)
@@ -517,13 +517,13 @@ Lifestyle shot. The closed kraft Cozy Evening Trio box with a gold Kind Flames l
 **`corporate-sample-kit-1-hero.png`**
 
 ```
-Product shot. An open natural kraft box, lid leaning behind, cream crinkle paper, containing three 4 oz Kind Flames candle jars with gold lids (labels: "Lavender Dreams" / "Bergamot · French lavender · Tonka bean" / "4 oz"; "Pine Forest" / "Juniper · Nordic pine · Moss" / "4 oz"; "Vanilla Bliss" / "Brown sugar · Madagascar vanilla · Sandalwood" / "4 oz"), a small 8 oz frosted jar of body scrub with bamboo lid (label: "Brown Sugar & Vanilla Body Scrub" / "8 oz"), and a small cream paper sachet of bath salts with a gold Kind Flames logo sticker. A cream card at the front reads only "Corporate Sample Kit" in pine-green serif under the logo. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.
+Product shot. An open natural kraft box, lid leaning behind, cream crinkle paper, containing three 4 oz Kind Flames candle jars with gold lids (labels: "Lavender Dreams" / "Bergamot · French lavender · Tonka bean" / "4 oz"; "Pine Forest" / "Juniper · Nordic pine · Moss" / "4 oz"; "Vanilla Bliss" / "Brown sugar · Madagascar vanilla · Sandalwood" / "4 oz"), a small 8 oz frosted jar of body scrub with bamboo lid (label: "Brown Sugar & Vanilla Body Scrub" / "8 oz"), and a small cream paper sachet of bath salts with a cream Kind Flames monogram sticker. A cream card at the front reads only "Corporate Sample Kit" in pine-green serif under the logo. Warm off-white backdrop, light oak surface, soft window light. Square, sharp.
 ```
 
 **`corporate-sample-kit-2-flatlay.png`**
 
 ```
-Flat lay, top-down, on a clean white desk. The Corporate Sample Kit contents (three 4 oz candles, the scrub jar, the salt sachet) arranged in a neat grid beside the kraft box, a cream card reading "Corporate Sample Kit" under the gold logo, a fountain pen and a closed notebook at the edge. Even soft light, business-gift mood.
+Flat lay, top-down, on a clean white desk. The Corporate Sample Kit contents (three 4 oz candles, the scrub jar, the salt sachet) arranged in a neat grid beside the kraft box, a cream card reading "Corporate Sample Kit" under the black logo, a fountain pen and a closed notebook at the edge. Even soft light, business-gift mood.
 ```
 
 ## After generating
