@@ -39,3 +39,6 @@ firebase-debug.log
 # full-resolution originals live in ../shamyraweb-assets (outside git)
 src/assets/images/*.png
 src/assets/pdf/
+
+# generated at build by scripts/feed.mjs (npm run feed)
+public/feed.xml
