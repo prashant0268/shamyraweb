@@ -25,6 +25,7 @@
   --radius-card: 0.75rem;
   --radius-img: 1rem;
   --radius-pill: 999px;
+  --radius-input: 0.625rem;
 }
 
 /* ---- Themes ------------------------------------------------------------- */
@@ -46,7 +47,7 @@
   --color-pine: #141414; --color-pine-dark: #000000; --color-pine-ink: #FFFFFF;
   --font-display: "Cormorant Garamond", "Times New Roman", serif;
   --font-body: "Inter", system-ui, sans-serif;
-  --radius-btn: 0; --radius-card: 0; --radius-img: 0; --radius-pill: 0;
+  --radius-btn: 0; --radius-card: 0; --radius-img: 0; --radius-pill: 0; --radius-input: 0;
   --display-weight: 500; --nav-case: uppercase; --nav-tracking: 0.14em; --nav-size: 0.75rem; --eyebrow-tracking: 0.2em;
   --hero-overlay: rgba(0, 0, 0, 0.25); --shadow-card: 0 1px 0 rgba(0,0,0,0.06);
 }
@@ -60,7 +61,7 @@
   --color-good: #7FBF95; --color-warn: #E0B35A; --color-bad: #E07A7A;
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "Jost", system-ui, sans-serif;
-  --radius-btn: 2px; --radius-card: 4px; --radius-img: 4px; --radius-pill: 2px;
+  --radius-btn: 2px; --radius-card: 4px; --radius-img: 4px; --radius-pill: 2px; --radius-input: 2px;
   --display-weight: 500; --nav-case: uppercase; --nav-tracking: 0.18em; --nav-size: 0.75rem; --eyebrow-tracking: 0.22em;
   --hero-overlay: rgba(0, 0, 0, 0.45); --shadow-card: 0 14px 40px -16px rgba(0,0,0,0.7);
   color-scheme: dark;
@@ -73,7 +74,7 @@
   --color-pine: #1F5F5B; --color-pine-dark: #164744; --color-pine-ink: #E6F3F1;
   --font-display: "DM Serif Display", Georgia, serif;
   --font-body: "DM Sans", system-ui, sans-serif;
-  --radius-btn: 999px; --radius-card: 1.25rem; --radius-img: 1.5rem; --radius-pill: 999px;
+  --radius-btn: 999px; --radius-card: 1.25rem; --radius-img: 1.5rem; --radius-pill: 999px; --radius-input: 0.875rem;
   --display-weight: 400; --nav-case: none; --nav-tracking: 0; --nav-size: 0.9375rem; --eyebrow-tracking: 0.1em;
   --hero-overlay: rgba(43, 35, 32, 0.3); --shadow-card: 0 16px 40px -18px rgba(43, 35, 32, 0.35);
 }
@@ -85,7 +86,7 @@
   --color-pine: #3D4F36; --color-pine-dark: #2D3B28; --color-pine-ink: #EEF3E9;
   --font-display: "Lora", Georgia, serif;
   --font-body: "Nunito Sans", system-ui, sans-serif;
-  --radius-btn: 6px; --radius-card: 10px; --radius-img: 10px; --radius-pill: 6px;
+  --radius-btn: 6px; --radius-card: 10px; --radius-img: 10px; --radius-pill: 6px; --radius-input: 6px;
   --display-weight: 500; --nav-case: uppercase; --nav-tracking: 0.1em; --nav-size: 0.78rem; --eyebrow-tracking: 0.16em;
   --hero-overlay: rgba(34, 41, 31, 0.35); --shadow-card: 0 10px 30px -14px rgba(34, 41, 31, 0.3);
 }
@@ -104,8 +105,12 @@
   .wrap { max-width: 80rem; margin-inline: auto; padding-inline: 1rem; }
   @media (min-width: 640px) { .wrap { padding-inline: 1.5rem; } }
   @media (min-width: 1280px) { .wrap { padding-inline: 2.5rem; } }
-  .input { width: 100%; border: 1px solid var(--color-line); background: var(--color-surface); border-radius: var(--radius-pill); padding: 0.6rem 0.85rem; font: inherit; color: var(--color-ink); }
-  .input:focus { outline: 2px solid var(--color-honey); outline-offset: 1px; border-color: transparent; }
+  .input { width: 100%; border: 1px solid var(--color-line); background: var(--color-surface); border-radius: var(--radius-input); padding: 0.6rem 0.85rem; font: inherit; color: var(--color-ink); line-height: 1.4; transition: border-color .15s, box-shadow .15s; }
+  .input:hover { border-color: color-mix(in srgb, var(--color-ink) 35%, var(--color-line)); }
+  .input:focus { outline: none; border-color: var(--color-ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-honey) 22%, transparent); }
+  select.input { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 2.4rem; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23808080' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>"); background-repeat: no-repeat; background-position: right 0.8rem center; background-size: 14px; }
+  select.input option { color: var(--color-ink); background: var(--color-surface); }
+  textarea.input { line-height: 1.5; }
   .label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; }
   .eyebrow { font-size: 0.72rem; letter-spacing: var(--eyebrow-tracking); text-transform: uppercase; color: var(--color-muted); font-weight: 700; }
   .nav-link { font-size: var(--nav-size); letter-spacing: var(--nav-tracking); text-transform: var(--nav-case); font-weight: 600; }

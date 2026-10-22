@@ -60,9 +60,10 @@ export default function Shop() {
           <span className="eyebrow mr-1">Scent</span>
           <button type="button" className={pill(!family)} onClick={() => set('family', '')}>Any</button>
           {families.map((f) => <button key={f} type="button" className={pill(family === f)} onClick={() => set('family', family === f ? '' : f)}>{f}</button>)}
-          <div className="flex-1" />
+          <div className="ml-auto flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-muted"><span className="nav-link text-xs">Up to</span><select value={max || ''} onChange={(e) => set('max', e.target.value)} className="input w-auto py-1.5 text-sm" aria-label="Max price"><option value="">Any price</option>{[25, 50, 75].map((n) => <option key={n} value={n}>${n}</option>)}</select></label>
           <label className="flex items-center gap-2 text-sm text-muted"><span className="nav-link text-xs">Sort</span><select value={sort} onChange={(e) => set('sort', e.target.value === 'featured' ? '' : e.target.value)} className="input w-auto py-1.5 text-sm" aria-label="Sort"><option value="featured">Featured</option><option value="new">Newest</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label>
+          </div>
         </div>
         <div className="mt-6 flex items-center justify-between text-sm text-muted"><span>{loading ? 'Loading…' : `${list.length} product${list.length === 1 ? '' : 's'}`}</span>{(family || max || q || sort !== 'featured') && <Link to={cat === 'all' ? '/shop' : `/shop/${cat}`} className="underline">Clear filters</Link>}</div>
         {!loading && list.length === 0 ? (
