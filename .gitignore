@@ -23,14 +23,16 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Environment variables: `.env` (machine-local dev values) stays out of git. The committed, non-secret
+# per-environment files are .env.production, .env.test, functions/.env and functions/.env.<projectId>.
 .env
 .env.local
-.env.production
+!functions/.env
+!functions/.env.shamyra-web
+!functions/.env.kindflames-test
 
-# Firebase
+# Firebase (.firebaserc is committed: it holds the prod/test aliases)
 .firebase/
-.firebaserc
 firebase-debug.log
 
 # emulator logs

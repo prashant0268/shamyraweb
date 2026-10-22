@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isProdEnv } from './env';
 
 export const SITE = 'https://kindflames.com';
 export const absUrl = (u: string) => (u.startsWith('http') ? u : SITE + u);
@@ -22,7 +23,8 @@ export function useSeo(opts: { title?: string; description?: string; image?: str
     set('meta[property="og:url"]', 'content', url);
     set('meta[property="og:image"]', 'content', image);
     set('meta[name="twitter:card"]', 'content', 'summary_large_image');
-    set('meta[name="robots"]', 'content', opts.noindex ? 'noindex,nofollow' : 'index,follow');
+    // Outside production (test site, dev server) every page is noindex, whatever the page asked for.
+    set('meta[name="robots"]', 'content', opts.noindex || !isProdEnv() ? 'noindex,nofollow' : 'index,follow');
     set('link[rel="canonical"]', 'href', url);
   }, [opts.title, opts.description, opts.image, opts.path, opts.noindex]);
 }
