@@ -42,3 +42,4 @@ src/assets/pdf/
 
 # generated at build by scripts/feed.mjs (npm run feed)
 public/feed.xml
+docs/revamp-shots/
