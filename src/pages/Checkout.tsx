@@ -7,13 +7,13 @@ import { useCatalog } from '../context/CatalogContext';
 import { capturePayPalOrder, createPayPalOrder, createStripeCheckout, errorMessage, quoteCart, type CheckoutInput } from '../services/api';
 import { money } from '../lib/format';
 import { useSeo } from '../lib/seo';
+import { isProdEnv } from '../lib/env';
 import { track } from '../lib/analytics';
 import Button from '../components/ui/Button';
 import { Alert, Field, ProductImage } from '../components/ui/Bits';
 import type { Pricing, ShippingAddress } from '../types';
 
 const STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'];
-const isProdHost = () => ['kindflames.com', 'www.kindflames.com'].includes(window.location.hostname);
 /** Callable error codes that mean "the function did not answer" rather than "the cart is wrong". */
 const TRANSIENT_QUOTE_ERROR = /internal|unavailable|not-found|deadline/;
 const QUOTE_RETRY_DELAYS_MS: readonly number[] = [1500, 3000];
@@ -43,7 +43,7 @@ export default function Checkout() {
   const orderRef = useRef<string>('');
 
   useEffect(() => { if (user?.email && !email) setEmail(user.email); }, [user, email]);
-  const cardAllowed = settings.cardPaymentsEnabled || !isProdHost();
+  const cardAllowed = settings.cardPaymentsEnabled || !isProdEnv();
   const valid = !!(email && addr.fullName && addr.address && addr.city && addr.state && /^\d{5}(-\d{4})?$/.test(addr.zipCode));
   const base: Omit<CheckoutInput, 'origin'> = useMemo(() => ({ items, shippingAddress: addr, email, discountCode: applied, shippingMethod: method, gift }), [items, addr, email, applied, method, gift]);
 
@@ -96,7 +96,7 @@ export default function Checkout() {
     catch (e) { setError(errorMessage(e)); setBusy(false); }
   };
 
-  const paypalClientId = isProdHost() ? import.meta.env.VITE_PAYPAL_CLIENT_ID_LIVE : import.meta.env.VITE_PAYPAL_CLIENT_ID;
+  const paypalClientId = (isProdEnv() ? import.meta.env.VITE_PAYPAL_CLIENT_ID_LIVE : import.meta.env.VITE_PAYPAL_CLIENT_ID) || '';
 
   if (ready && hydrated.length === 0 && !busy) return <div className="wrap py-20 text-center"><h1 className="text-3xl">Your bag is empty</h1><Button to="/shop" className="mt-4">Browse the shop</Button></div>;
 

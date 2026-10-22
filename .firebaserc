@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "shamyra-web",
+    "prod": "shamyra-web",
+    "test": "kindflames-test"
+  }
+}

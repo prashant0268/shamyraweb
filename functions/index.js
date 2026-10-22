@@ -23,9 +23,17 @@ initializeApp();
 const db = getFirestore();
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 
-/* ----------------------------- configuration ----------------------------- */
+/* ----------------------------- configuration -----------------------------
+ * Non-secret config comes from functions/.env (shared fallback) overlaid by functions/.env.<projectId>
+ * (.env.shamyra-web = production, .env.kindflames-test = test). The Firebase CLI loads both at deploy time and in
+ * the emulator. Secrets (STRIPE_*, PAYPAL_*, RESEND_API_KEY) stay in Secret Manager, one set per project.
+ * Code defaults below equal the historical hardcoded production values, so a missing env file changes nothing
+ * for shamyra-web. See docs/ENVIRONMENTS.md. */
 const ENV = process.env;
+const PROJECT_ID = ENV.GCLOUD_PROJECT || (() => { try { return JSON.parse(ENV.FIREBASE_CONFIG || "{}").projectId || ""; } catch { return ""; } })();
 const SITE_URL = (ENV.SITE_URL || "https://kindflames.com").replace(/\/$/, "");
+/** Real store? Gates live PayPal and the "production hosts". Anything but an explicit "false" counts as production. */
+const IS_PRODUCTION = String(ENV.IS_PRODUCTION ?? "true").trim().toLowerCase() !== "false";
 const ADMIN_EMAILS = (ENV.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 const OWNER_EMAIL = ENV.OWNER_EMAIL || ADMIN_EMAILS[0] || "";
 const FROM_EMAIL = ENV.FROM_EMAIL || "Kind Flames <orders@kindflames.com>";
@@ -37,24 +45,27 @@ const ENABLE_STRIPE_WEBHOOK = FEATURES.stripeWebhook === true;
 const MAIL_SECRETS = ENABLE_RESEND ? ["RESEND_API_KEY"] : [];
 const STRIPE_SECRETS = ["STRIPE_SECRET_KEY", ...MAIL_SECRETS];
 const PAYPAL_SECRETS = ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_CLIENT_ID_LIVE", "PAYPAL_CLIENT_SECRET_LIVE", "PAYPAL_MODE", ...MAIL_SECRETS];
-const ALLOWED_ORIGINS = [SITE_URL, "https://www.kindflames.com", "https://kindflames.com", "https://shamyra-web.web.app", "https://shamyra-web.firebaseapp.com", "http://localhost:5173", "http://localhost:5174", "http://localhost:4173"];
-const PRODUCTION_HOSTS = ["kindflames.com", "www.kindflames.com"];
+/** "kindflames.com" → ["kindflames.com", "www.kindflames.com"] (and the reverse); Firebase Hosting default domains
+ *  have no www form; [] when there is no host. */
+const hostVariants = (host) => (!host ? [] : /\.(web\.app|firebaseapp\.com)$/.test(host) ? [host] : host.startsWith("www.") ? [host, host.slice(4)] : [host, `www.${host}`]);
+const SITE_HOST = (() => { try { return new URL(SITE_URL).hostname; } catch { return ""; } })();
+const EXTRA_ORIGINS = (ENV.EXTRA_ORIGINS || "").split(",").map((s) => s.trim().replace(/\/$/, "")).filter(Boolean);
+const LOCAL_ORIGINS = ["http://localhost:5173", "http://localhost:5174", "http://localhost:4173"];
+/** Browser origins allowed to start a checkout: the site (with/without www), this project's Firebase Hosting
+ *  domains, EXTRA_ORIGINS from .env, and the Vite dev/preview ports. */
+const ALLOWED_ORIGINS = [...new Set([
+  SITE_URL,
+  ...hostVariants(SITE_HOST).map((h) => `https://${h}`),
+  ...(PROJECT_ID ? [`https://${PROJECT_ID}.web.app`, `https://${PROJECT_ID}.firebaseapp.com`] : []),
+  ...EXTRA_ORIGINS,
+  ...LOCAL_ORIGINS,
+])];
+/** Only these origins may use live PayPal; empty outside production, so a test project can never charge real money. */
+const PRODUCTION_HOSTS = IS_PRODUCTION ? hostVariants(SITE_HOST) : [];
+/** PAYPAL_MODE secret wins; otherwise live in production, sandbox everywhere else. */
+const PAYPAL_MODE_DEFAULT = IS_PRODUCTION ? "live" : "sandbox";
 
-const DEFAULT_SETTINGS = {
-  brandName: "Kind Flames",
-  legalName: "Shamyra Naturals LLC",
-  contactEmail: "hello@kindflames.com",
-  contactPhone: "(732) 666-8013",
-  freeShippingThreshold: 60,
-  flatShipping: 6.95,
-  expressShipping: 14.5,
-  giftWrapFee: 5,
-  bundleDiscountPercent: 15,
-  taxRates: { NJ: 0.06625 },
-  cardPaymentsEnabled: false,
-  paypalEnabled: true,
-  announcement: { text: "Free US shipping on orders over $60", visible: true },
-};
+const { DEFAULT_SETTINGS } = require("./defaults");
 
 async function getProduct(id) {
   const snap = await db.doc(`products/${id}`).get();
@@ -230,7 +241,8 @@ if (ENABLE_STRIPE_WEBHOOK) {
 
 /* -------------------------------- PayPal --------------------------------- */
 function getPayPalClient(origin) {
-  const wantLive = (process.env.PAYPAL_MODE || "").trim() === "live" && isProductionOrigin(origin);
+  const mode = (process.env.PAYPAL_MODE || "").trim() || PAYPAL_MODE_DEFAULT;
+  const wantLive = mode === "live" && isProductionOrigin(origin);
   const clientId = (wantLive ? process.env.PAYPAL_CLIENT_ID_LIVE : process.env.PAYPAL_CLIENT_ID || "").trim();
   const clientSecret = (wantLive ? process.env.PAYPAL_CLIENT_SECRET_LIVE : process.env.PAYPAL_CLIENT_SECRET || "").trim();
   if (!clientId || !clientSecret) throw new HttpsError("failed-precondition", `PayPal ${wantLive ? "live" : "sandbox"} credentials are not configured.`);

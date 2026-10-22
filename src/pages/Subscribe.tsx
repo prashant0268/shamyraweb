@@ -5,6 +5,7 @@ import { useCatalog } from '../context/CatalogContext';
 import { createSubscriptionCheckout, errorMessage, listPlans, verifySubscription } from '../services/api';
 import { money } from '../lib/format';
 import { useSeo } from '../lib/seo';
+import { isProdEnv } from '../lib/env';
 import { track } from '../lib/analytics';
 import Button from '../components/ui/Button';
 import { Alert, Field } from '../components/ui/Bits';
@@ -45,8 +46,7 @@ export default function Subscribe() {
   const [error, setError] = useState(params.get('cancelled') ? 'Checkout cancelled — nothing was charged.' : '');
   useEffect(() => { listPlans({}).then((r) => setPlans(r.plans)).catch(() => {}); }, []);
   useEffect(() => { if (user?.email && !email) setEmail(user.email); }, [user, email]);
-  const isProd = ['kindflames.com', 'www.kindflames.com'].includes(window.location.hostname);
-  const open = settings.cardPaymentsEnabled || !isProd;
+  const open = settings.cardPaymentsEnabled || !isProdEnv();
   const valid = !!(email && addr.fullName && addr.address && addr.city && /^\d{5}(-\d{4})?$/.test(addr.zipCode));
   const set = (k: keyof ShippingAddress) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setAddr({ ...addr, [k]: e.target.value });
   const go = async () => {
