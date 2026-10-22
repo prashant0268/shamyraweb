@@ -14,6 +14,10 @@ import type { Pricing, ShippingAddress } from '../types';
 
 const STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'];
 const isProdHost = () => ['kindflames.com', 'www.kindflames.com'].includes(window.location.hostname);
+/** Callable error codes that mean "the function did not answer" rather than "the cart is wrong". */
+const TRANSIENT_QUOTE_ERROR = /internal|unavailable|not-found|deadline/;
+const QUOTE_RETRY_DELAYS_MS: readonly number[] = [1500, 3000];
+const QUOTE_OUTAGE = 'Checkout is temporarily unavailable — our pricing service did not respond. Please try again in a few minutes or email hello@kindflames.com.';
 
 export default function Checkout() {
   useSeo({ title: 'Checkout', noindex: true });
@@ -33,6 +37,7 @@ export default function Checkout() {
   const [pay, setPay] = useState<'paypal' | 'card'>('paypal');
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [quoteError, setQuoteError] = useState('');
+  const [quoteAttempt, setQuoteAttempt] = useState(0); // bumped by "Try again"
   const [error, setError] = useState(params.get('cancelled') ? 'Payment was cancelled. Your bag is still here when you are ready.' : '');
   const [busy, setBusy] = useState(false);
   const orderRef = useRef<string>('');
@@ -43,19 +48,45 @@ export default function Checkout() {
   const base: Omit<CheckoutInput, 'origin'> = useMemo(() => ({ items, shippingAddress: addr, email, discountCode: applied, shippingMethod: method, gift }), [items, addr, email, applied, method, gift]);
 
   // Server-priced totals; re-quoted when anything that affects price changes.
+  // Transient failures (cold start, brief outage) are retried with a short backoff before the outage
+  // message shows. The cleanup aborts the previous run so a slow, stale response never overwrites a newer quote.
   useEffect(() => {
     if (!items.length) return;
-    const t = setTimeout(() => {
-      quoteCart({ items, shippingAddress: { ...addr, zipCode: addr.zipCode || '00000', fullName: addr.fullName || 'x', address: addr.address || 'x', city: addr.city || 'x' }, discountCode: applied, shippingMethod: method, gift })
-        .then((p) => { setPricing(p); setQuoteError(''); })
-        .catch((e) => { try { if (applied) localStorage.removeItem('kf_code'); } catch { /* ignore */ } const code = (e as { code?: string }).code || ''; const unreachable = /internal|unavailable|not-found|deadline/.test(code) && !applied; setQuoteError(unreachable ? 'Checkout is temporarily unavailable — our pricing service did not respond. Please try again in a few minutes or email hello@kindflames.com.' : errorMessage(e)); if (applied) setApplied(null); });
-    }, 350);
-    return () => clearTimeout(t);
-  }, [items, addr.state, addr.zipCode, applied, method, gift.wrap]); // eslint-disable-line react-hooks/exhaustive-deps
+    let active = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const sleep = (ms: number) => new Promise<void>((resolve) => { timers.push(setTimeout(resolve, ms)); });
+    const input = { items, shippingAddress: { ...addr, zipCode: addr.zipCode || '00000', fullName: addr.fullName || 'x', address: addr.address || 'x', city: addr.city || 'x' }, discountCode: applied, shippingMethod: method, gift };
+    (async () => {
+      await sleep(350);
+      for (let attempt = 0; active; attempt++) {
+        try {
+          const p = await quoteCart(input);
+          if (!active) return;
+          setPricing(p); setQuoteError('');
+          return;
+        } catch (e) {
+          if (!active) return;
+          const code = (e as { code?: string }).code || '';
+          const transient = TRANSIENT_QUOTE_ERROR.test(code);
+          if (transient && !applied && attempt < QUOTE_RETRY_DELAYS_MS.length) { await sleep(QUOTE_RETRY_DELAYS_MS[attempt] ?? 0); continue; }
+          if (applied) {
+            // The stored or typed code was rejected: forget it and re-quote without it. The message stays
+            // until that re-quote succeeds, so the outage text never flashes in between.
+            try { localStorage.removeItem('kf_code'); } catch { /* ignore */ }
+            setQuoteError(errorMessage(e));
+            setApplied(null);
+          } else setQuoteError(transient ? QUOTE_OUTAGE : errorMessage(e));
+          return;
+        }
+      }
+    })();
+    return () => { active = false; timers.forEach(clearTimeout); };
+  }, [items, addr.state, addr.zipCode, applied, method, gift.wrap, quoteAttempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (hydrated.length) track('begin_checkout', { value: hydrated.reduce((n, l) => n + l.variant.price * l.quantity, 0), currency: 'USD' }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applyCode = (e: FormEvent) => { e.preventDefault(); setApplied(code.trim().toUpperCase() || null); };
+  const retryQuote = () => { setQuoteError(''); setQuoteAttempt((n) => n + 1); };
   const ensureUser = useCallback(async () => user ?? (await loginAsGuest()), [user, loginAsGuest]);
 
   const payWithCard = async () => {
@@ -154,7 +185,12 @@ export default function Checkout() {
           <h2 className="text-xl">Order summary</h2>
           <div className="space-y-3">{hydrated.map((l) => <div key={l.productId + l.variantId} className="flex items-center gap-3 text-sm"><div className="h-12 w-12 flex-none overflow-hidden rounded-md bg-surface-2"><ProductImage product={l.product} size={400} className="h-full w-full" /></div><div className="min-w-0 flex-1"><div className="truncate font-semibold">{l.product.name}</div><div className="text-xs text-muted">{l.variant.label} × {l.quantity}{l.bundle ? ' · spa set' : ''}</div></div><span className="num">{money(l.variant.price * l.quantity)}</span></div>)}</div>
           <form onSubmit={applyCode} className="flex gap-2"><input id="co-code" className="input" placeholder="Discount code" value={code} onChange={(e) => setCode(e.target.value)} aria-label="Discount code" /><Button type="submit" variant="ghost" size="sm">Apply</Button></form>
-          {quoteError && <Alert tone={/unavailable/.test(quoteError) ? 'bad' : 'warn'}>{quoteError}</Alert>}
+          {quoteError && (
+            <div className="space-y-2">
+              <Alert tone={quoteError === QUOTE_OUTAGE ? 'bad' : 'warn'}>{quoteError}</Alert>
+              {quoteError === QUOTE_OUTAGE && <Button type="button" variant="ghost" size="sm" block onClick={retryQuote}>Try again</Button>}
+            </div>
+          )}
           {pricing ? (
             <div className="space-y-1">
               <Row l="Subtotal" v={money(pricing.subtotal)} />
