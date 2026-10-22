@@ -17,7 +17,7 @@ export default function Cart() {
       <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <div className="space-y-3">{hydrated.map((l) => (
           <div key={l.productId + l.variantId} className="card flex items-center gap-4 p-3">
-            <Link to={`/product/${l.product.slug}`} className="h-20 w-20 flex-none overflow-hidden rounded-lg bg-surface-2"><ProductImage product={l.product} size={400} className="h-full w-full" /></Link>
+            <Link to={`/product/${l.product.slug}`} className="h-20 w-20 flex-none overflow-hidden rounded-card bg-surface-2"><ProductImage product={l.product} size={400} className="h-full w-full" /></Link>
             <div className="min-w-0 flex-1"><Link to={`/product/${l.product.slug}`} className="font-display text-lg font-semibold hover:underline">{l.product.name}</Link><div className="text-sm text-muted">{l.variant.label} · {money(l.variant.price)}{l.bundle ? ' · spa set (15% off at checkout)' : ''}</div><div className="mt-2 flex items-center gap-3"><Qty size="sm" value={l.quantity} onChange={(n) => setQuantity(l.productId, l.variantId, n)} /><button className="text-xs text-muted underline" onClick={() => remove(l.productId, l.variantId)}>Remove</button></div></div>
             <div className="num font-bold">{money(l.variant.price * l.quantity)}</div>
           </div>

@@ -50,7 +50,7 @@ export default function Corporate() {
         <div className="space-y-4"><div className="eyebrow">Corporate &amp; bulk gifting</div><h1 className="text-4xl sm:text-5xl">Gifts people actually keep on their desk.</h1><p className="max-w-[48ch] text-lg text-muted">Hand-poured candles and spa sets with your logo on the label or a card inside. From 25 units. Ship to your office or straight to each recipient.</p>
           <div className="flex flex-wrap gap-3"><Button variant="accent" size="lg" href="#quote">Request a quote</Button>{sample && <Button variant="ghost" size="lg" onClick={() => { if (kit) addKit(); else { add(sample.id, sample.variants[0]!.id); toast('Sample set added — credited on your first corporate order'); } }}>{kit ? 'Order a sample kit' : 'Order a sample set'}</Button>}</div>
           <p className="text-sm text-muted">Sample cost is credited on your first order. Typical lead time 10 business days; custom labels 15.</p></div>
-        {hero && <div className="overflow-hidden rounded-3xl bg-surface-2"><ProductImage product={hero} size={800} className="aspect-[4/3] w-full" /></div>}
+        {hero && <div className="overflow-hidden rounded-img bg-surface-2"><ProductImage product={hero} size={800} className="aspect-[4/3] w-full" /></div>}
       </section>
 
       <section className="py-8"><div className="mb-5"><div className="eyebrow">Pricing</div><h2 className="text-3xl">Simple tiers, no setup fee under 100</h2></div>
@@ -79,7 +79,7 @@ export default function Corporate() {
 
       <section className="py-8"><div className="mb-5"><div className="eyebrow">How it works</div><h2 className="text-3xl">Quote to doorstep</h2></div>
         <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[['Tell us the occasion', 'Quantity, budget, date, and whether you want our scents or a custom blend.'], ['Quote in 1 business day', 'With a mock-up of the label or card.'], ['Approve & pay', 'Card, ACH, or Net-30 invoice for approved accounts.'], ['We pour, pack, ship', 'Upload a recipient list and we handle every address. Each box carries a QR code offering recipients 15% off.']].map(([t, d], i) => (
-          <li key={t} className="card p-4"><div className="mb-2 flex h-7 w-7 items-center justify-center rounded-full bg-honey text-sm font-bold text-honey-ink">{i + 1}</div><div className="font-bold">{t}</div><p className="text-sm text-muted">{d}</p></li>
+          <li key={t} className="card p-4"><div className="mb-2 flex h-7 w-7 items-center justify-center rounded-btn bg-honey text-sm font-bold text-honey-ink">{i + 1}</div><div className="font-bold">{t}</div><p className="text-sm text-muted">{d}</p></li>
         ))}</ol></section>
 
       <section id="quote" className="grid gap-8 py-8 md:grid-cols-2">

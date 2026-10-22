@@ -30,6 +30,7 @@ Catalog in Firestore with 5 categories · product detail pages · search/filter 
 | 11 | Weekly owner digest (sales, top products, recovered carts) + low-stock alerts | dev | todo | functions scheduler. |
 | 12 | Stripe webhook enabled (`STRIPE_WEBHOOK_SECRET` + `features.json`) | dev / you | todo | You create the endpoint in Stripe; dev flips the flag and deploys. |
 | 13 | WELCOME10 discount created in Admin → Discounts | you | todo | The signup banner promises it. |
+| 23 | Storefront revamp: 5 switchable themes, mega menu, photo hero/tiles, scent-family tiles, welcome popup (10% off), PDP gallery/size cards/sticky add-to-bag, cart upsells, new footer; placeholder photos from Unsplash until Gemini renders land | dev / you | review | Built Oct 21 on a preview channel (not live). See `docs/REVAMP.md`. You: open the preview, try `?theme=` links, pick a theme in Admin → Settings → Appearance, then tell dev to deploy to kindflames.com. |
 
 ## Later — operations and SEO
 

@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+/* Design tokens. Every storefront theme redefines the same set under [data-theme] below,
+   so components only ever use the semantic names (bg, surface, ink, pine = primary, honey = accent). */
 @theme {
   --color-bg: #F3F1EC;
   --color-surface: #FFFFFF;
@@ -19,23 +21,94 @@
   --color-bad: #B23A3A;
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-body: "Karla", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius-btn: 999px;
+  --radius-card: 0.75rem;
+  --radius-img: 1rem;
+  --radius-pill: 999px;
 }
 
+/* ---- Themes ------------------------------------------------------------- */
+/* hearth = the defaults above. Each theme below overrides colors, type and corner radii. */
+:root {
+  --display-weight: 600;
+  --nav-case: none;
+  --nav-tracking: 0;
+  --nav-size: 0.9375rem;
+  --eyebrow-tracking: 0.12em;
+  --hero-overlay: rgba(20, 24, 20, 0.35);
+  --shadow-card: 0 10px 30px -12px rgba(30, 35, 29, 0.25);
+}
+
+[data-theme="atelier"] {
+  --color-bg: #FFFFFF; --color-surface: #FFFFFF; --color-surface-2: #F4F3F0;
+  --color-ink: #141414; --color-muted: #6E6E6B; --color-line: #E3E1DC;
+  --color-honey: #141414; --color-honey-dark: #000000; --color-honey-ink: #FFFFFF;
+  --color-pine: #141414; --color-pine-dark: #000000; --color-pine-ink: #FFFFFF;
+  --font-display: "Cormorant Garamond", "Times New Roman", serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --radius-btn: 0; --radius-card: 0; --radius-img: 0; --radius-pill: 0;
+  --display-weight: 500; --nav-case: uppercase; --nav-tracking: 0.14em; --nav-size: 0.75rem; --eyebrow-tracking: 0.2em;
+  --hero-overlay: rgba(0, 0, 0, 0.25); --shadow-card: 0 1px 0 rgba(0,0,0,0.06);
+}
+[data-theme="atelier"] h1, [data-theme="atelier"] h2 { letter-spacing: -0.01em; }
+
+[data-theme="noir"] {
+  --color-bg: #15130F; --color-surface: #1E1B16; --color-surface-2: #2A261F;
+  --color-ink: #F3ECDD; --color-muted: #A79D8B; --color-line: #36312A;
+  --color-honey: #C9A24E; --color-honey-dark: #A9863A; --color-honey-ink: #1A1408;
+  --color-pine: #F3ECDD; --color-pine-dark: #E2D8C3; --color-pine-ink: #15130F;
+  --color-good: #7FBF95; --color-warn: #E0B35A; --color-bad: #E07A7A;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Jost", system-ui, sans-serif;
+  --radius-btn: 2px; --radius-card: 4px; --radius-img: 4px; --radius-pill: 2px;
+  --display-weight: 500; --nav-case: uppercase; --nav-tracking: 0.18em; --nav-size: 0.75rem; --eyebrow-tracking: 0.22em;
+  --hero-overlay: rgba(0, 0, 0, 0.45); --shadow-card: 0 14px 40px -16px rgba(0,0,0,0.7);
+  color-scheme: dark;
+}
+
+[data-theme="sunroom"] {
+  --color-bg: #FBF5EC; --color-surface: #FFFFFF; --color-surface-2: #F3E8D8;
+  --color-ink: #2B2320; --color-muted: #7A6A62; --color-line: #E9DCCB;
+  --color-honey: #C9643B; --color-honey-dark: #A84F2C; --color-honey-ink: #FFF7F0;
+  --color-pine: #1F5F5B; --color-pine-dark: #164744; --color-pine-ink: #E6F3F1;
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --radius-btn: 999px; --radius-card: 1.25rem; --radius-img: 1.5rem; --radius-pill: 999px;
+  --display-weight: 400; --nav-case: none; --nav-tracking: 0; --nav-size: 0.9375rem; --eyebrow-tracking: 0.1em;
+  --hero-overlay: rgba(43, 35, 32, 0.3); --shadow-card: 0 16px 40px -18px rgba(43, 35, 32, 0.35);
+}
+
+[data-theme="apothecary"] {
+  --color-bg: #EEF0EA; --color-surface: #FFFFFF; --color-surface-2: #E2E6DC;
+  --color-ink: #22291F; --color-muted: #66705F; --color-line: #D3D9CC;
+  --color-honey: #B5785A; --color-honey-dark: #96603F; --color-honey-ink: #FFF6F0;
+  --color-pine: #3D4F36; --color-pine-dark: #2D3B28; --color-pine-ink: #EEF3E9;
+  --font-display: "Lora", Georgia, serif;
+  --font-body: "Nunito Sans", system-ui, sans-serif;
+  --radius-btn: 6px; --radius-card: 10px; --radius-img: 10px; --radius-pill: 6px;
+  --display-weight: 500; --nav-case: uppercase; --nav-tracking: 0.1em; --nav-size: 0.78rem; --eyebrow-tracking: 0.16em;
+  --hero-overlay: rgba(34, 41, 31, 0.35); --shadow-card: 0 10px 30px -14px rgba(34, 41, 31, 0.3);
+}
+
+/* ---- Base ---------------------------------------------------------------- */
 @layer base {
   html { scroll-behavior: smooth; }
   body { background-color: var(--color-bg); color: var(--color-ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.1; text-wrap: balance; }
+  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: var(--display-weight); line-height: 1.1; text-wrap: balance; }
   :focus-visible { outline: 2px solid var(--color-honey); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 }
 
+/* ---- Components ---------------------------------------------------------- */
 @layer components {
-  .wrap { max-width: 74rem; margin-inline: auto; padding-inline: 1rem; }
+  .wrap { max-width: 80rem; margin-inline: auto; padding-inline: 1rem; }
   @media (min-width: 640px) { .wrap { padding-inline: 1.5rem; } }
-  .input { width: 100%; border: 1px solid var(--color-line); background: var(--color-surface); border-radius: 0.5rem; padding: 0.6rem 0.75rem; font: inherit; color: var(--color-ink); }
+  @media (min-width: 1280px) { .wrap { padding-inline: 2.5rem; } }
+  .input { width: 100%; border: 1px solid var(--color-line); background: var(--color-surface); border-radius: var(--radius-pill); padding: 0.6rem 0.85rem; font: inherit; color: var(--color-ink); }
   .input:focus { outline: 2px solid var(--color-honey); outline-offset: 1px; border-color: transparent; }
   .label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; }
-  .eyebrow { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted); font-weight: 700; }
+  .eyebrow { font-size: 0.72rem; letter-spacing: var(--eyebrow-tracking); text-transform: uppercase; color: var(--color-muted); font-weight: 700; }
+  .nav-link { font-size: var(--nav-size); letter-spacing: var(--nav-tracking); text-transform: var(--nav-case); font-weight: 600; }
   .prose p { margin-bottom: 1rem; max-width: 68ch; }
   .prose h2 { font-size: 1.5rem; margin: 2rem 0 0.75rem; }
   .prose h3 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; }
@@ -43,5 +116,15 @@
   .prose li { margin-bottom: 0.25rem; }
   .prose a { color: var(--color-pine); text-decoration: underline; }
   .num { font-variant-numeric: tabular-nums; }
-  .card { background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 0.75rem; }
+  .card { background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-card); }
+  .img-frame { border-radius: var(--radius-img); overflow: hidden; }
+  .btn-radius { border-radius: var(--radius-btn); }
+  .pill-radius { border-radius: var(--radius-pill); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .hero-overlay { background: linear-gradient(to top, var(--hero-overlay), transparent 70%); }
+  .rail { display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 0.5rem; scrollbar-width: thin; }
+  .rail > * { scroll-snap-align: start; flex: none; }
+  .no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; }
+  @keyframes ticker { 0%, 100% { opacity: 0; transform: translateY(4px); } 10%, 90% { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadein .25s ease-out; } @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 }

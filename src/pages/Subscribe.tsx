@@ -27,7 +27,7 @@ export function SubscribeThanks() {
   }, [loading, params]);
   if (state === 'checking') return <div className="wrap py-24 text-center text-muted">Confirming your subscription…</div>;
   if (state === 'fail') return <div className="wrap max-w-lg py-16"><Alert>{msg}</Alert><Button to="/subscribe" className="mt-4">Back</Button></div>;
-  return <div className="wrap max-w-lg py-16 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-good/15 text-3xl text-good">✓</div><h1 className="mt-4 text-3xl">You're in.</h1><p className="mt-2 text-muted">Your first box ships within 5 business days. Manage, pause or cancel any time from your account.</p><div className="mt-5 flex justify-center gap-3"><Button to="/account">My account</Button><Button variant="ghost" to="/shop">Keep browsing</Button></div></div>;
+  return <div className="wrap max-w-lg py-16 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-btn bg-good/15 text-3xl text-good">✓</div><h1 className="mt-4 text-3xl">You're in.</h1><p className="mt-2 text-muted">Your first box ships within 5 business days. Manage, pause or cancel any time from your account.</p><div className="mt-5 flex justify-center gap-3"><Button to="/account">My account</Button><Button variant="ghost" to="/shop">Keep browsing</Button></div></div>;
 }
 
 export default function Subscribe() {
@@ -61,7 +61,7 @@ export default function Subscribe() {
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">{plans.map((p) => (
-            <button key={p.id} type="button" onClick={() => setPlan(p.id)} className={`card p-5 text-left transition ${plan === p.id ? 'border-honey shadow-lg' : 'hover:border-pine'}`}><div className="eyebrow">{p.intervalCount === 1 ? 'Monthly' : 'Every 3 months'}</div><div className="font-display text-2xl font-semibold">{p.name}</div><div className="num mt-1 text-xl font-bold">{money(p.amount / 100)}<span className="text-sm font-normal text-muted"> / {p.intervalCount === 1 ? 'month' : 'quarter'}</span></div><p className="mt-2 text-sm text-muted">{p.description}</p>{p.id === 'quarterly' && <span className="mt-2 inline-block rounded-full bg-good/15 px-2 py-0.5 text-xs font-bold text-good">Save vs. buying separately</span>}</button>
+            <button key={p.id} type="button" onClick={() => setPlan(p.id)} className={`card p-5 text-left transition ${plan === p.id ? 'border-honey shadow-lg' : 'hover:border-pine'}`}><div className="eyebrow">{p.intervalCount === 1 ? 'Monthly' : 'Every 3 months'}</div><div className="font-display text-2xl font-semibold">{p.name}</div><div className="num mt-1 text-xl font-bold">{money(p.amount / 100)}<span className="text-sm font-normal text-muted"> / {p.intervalCount === 1 ? 'month' : 'quarter'}</span></div><p className="mt-2 text-sm text-muted">{p.description}</p>{p.id === 'quarterly' && <span className="mt-2 inline-block rounded-btn bg-good/15 px-2 py-0.5 text-xs font-bold text-good">Save vs. buying separately</span>}</button>
           ))}</div>
           <div className="card space-y-3 p-5">
             <h2 className="text-xl">Your preferences</h2>

@@ -45,8 +45,15 @@ export interface StoreSettings {
   brandName: string; legalName: string; contactEmail: string; contactPhone: string;
   freeShippingThreshold: number; flatShipping: number; expressShipping: number; giftWrapFee: number; bundleDiscountPercent: number;
   taxRates: Record<string, number>; cardPaymentsEnabled: boolean; paypalEnabled: boolean;
-  announcement: { text: string; visible: boolean };
+  announcement: { text: string; visible: boolean; messages?: string[] };
   homepage?: { showChristmas?: boolean; showCorporate?: boolean; showNewsletter?: boolean };
+  /** Storefront theme id (see src/themes.ts). */
+  theme?: string;
+  /** Show internet stand-in photos for products until the real renders are uploaded. */
+  placeholderImages?: boolean;
+  /** First-visit email popup. */
+  popup?: { enabled: boolean; headline: string; body: string; code: string; delaySeconds: number };
+  social?: { instagram?: string; facebook?: string; tiktok?: string; pinterest?: string };
 }
 
 export interface Discount { code: string; type: 'percent' | 'fixed'; value: number; minSubtotal?: number; active: boolean; expiresAt?: { seconds: number } | null; usageLimit?: number | null; usageCount?: number; firstOrderOnly?: boolean; appliesTo?: 'all' | 'sets'; note?: string }

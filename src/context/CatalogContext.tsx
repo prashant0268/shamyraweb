@@ -8,8 +8,11 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   brandName: 'Kind Flames', legalName: 'Shamyra Naturals LLC', contactEmail: 'hello@kindflames.com', contactPhone: '(732) 666-8013',
   freeShippingThreshold: 60, flatShipping: 6.95, expressShipping: 14.5, giftWrapFee: 5, bundleDiscountPercent: 15,
   taxRates: { NJ: 0.06625 }, cardPaymentsEnabled: false, paypalEnabled: true,
-  announcement: { text: 'Free US shipping on orders over $60', visible: true },
+  announcement: { text: 'Free US shipping on orders over $60', visible: true, messages: ['Free US shipping on orders over $60', 'New here? Take 10% off your first order with WELCOME10', '30-day happiness guarantee · wrong scent? We swap it'] },
   homepage: { showChristmas: true, showCorporate: true, showNewsletter: true },
+  theme: 'hearth', placeholderImages: true,
+  popup: { enabled: true, headline: 'Take 10% off your first order', body: 'Join the list for new scents, restocks and the occasional candle-care tip. One email a week at most.', code: 'WELCOME10', delaySeconds: 6 },
+  social: { instagram: 'https://instagram.com/kindflames', facebook: '', tiktok: '', pinterest: '' },
 };
 
 interface CatalogContextType {
@@ -31,7 +34,7 @@ export const CatalogProvider = ({ children }: { children: ReactNode }) => {
       getDoc(doc(db, 'settings', 'store')).then((d): Partial<StoreSettings> => (d.exists() ? (d.data() as Partial<StoreSettings>) : {})).catch((): Partial<StoreSettings> => ({})),
     ]);
     setAll(products); setSource(source);
-    setSettings({ ...DEFAULT_SETTINGS, ...s, announcement: { ...DEFAULT_SETTINGS.announcement, ...(s.announcement || {}) }, homepage: { ...DEFAULT_SETTINGS.homepage, ...(s.homepage || {}) } });
+    setSettings({ ...DEFAULT_SETTINGS, ...s, announcement: { ...DEFAULT_SETTINGS.announcement, ...(s.announcement || {}) }, homepage: { ...DEFAULT_SETTINGS.homepage, ...(s.homepage || {}) }, popup: { ...DEFAULT_SETTINGS.popup!, ...(s.popup || {}) }, social: { ...DEFAULT_SETTINGS.social, ...(s.social || {}) } });
     setLoading(false);
   }, []);
 

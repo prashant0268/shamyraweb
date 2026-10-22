@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CatalogProvider } from './context/CatalogContext';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
@@ -82,7 +83,9 @@ export default function App() {
         <CatalogProvider>
           <CartProvider>
             <ToastProvider>
-              <AppRoutes />
+              <ThemeProvider>
+                <AppRoutes />
+              </ThemeProvider>
             </ToastProvider>
           </CartProvider>
         </CatalogProvider>

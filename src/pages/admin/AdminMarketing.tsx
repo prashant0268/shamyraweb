@@ -68,7 +68,7 @@ function ImagePromptsEditor() {
     const md = toMarkdown(data);
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown' })); a.download = 'kindflames-image-prompts.md'; a.click();
   };
-  const toggleProduct = (name: string, shots: ImagePromptShot[]) => setOpen((o) => { const all = shots.every((s) => o[s.filename]); const next = { ...o }; shots.forEach((s) => { next[s.filename] = !all; }); return next; });
+  const toggleProduct = (shots: ImagePromptShot[]) => setOpen((o) => { const all = shots.every((s) => o[s.filename]); const next = { ...o }; shots.forEach((s) => { next[s.filename] = !all; }); return next; });
 
   return (
     <div className="space-y-5">
@@ -114,11 +114,11 @@ function ImagePromptsEditor() {
             const expanded = shots.some((s) => open[s.filename]);
             return (
               <div key={name} className="card">
-                <button type="button" className="flex w-full items-center gap-3 p-3 text-left sm:p-4" onClick={() => toggleProduct(name, shots)}>
+                <button type="button" className="flex w-full items-center gap-3 p-3 text-left sm:p-4" onClick={() => toggleProduct(shots)}>
                   <span className="font-display text-base font-semibold">{name}</span>
                   <span className="text-xs text-muted">{shots.length} shot{shots.length === 1 ? '' : 's'}</span>
                   <span className="flex-1" />
-                  <Link to={`/admin/products/${shots[0].productId}`} className="text-xs text-muted hover:text-ink" onClick={(e) => e.stopPropagation()}>Product →</Link>
+                  <Link to={`/admin/products/${shots[0]?.productId ?? ''}`} className="text-xs text-muted hover:text-ink" onClick={(e) => e.stopPropagation()}>Product →</Link>
                   <span className="text-muted">{expanded ? '−' : '+'}</span>
                 </button>
                 {expanded && (

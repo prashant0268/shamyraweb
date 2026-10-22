@@ -67,8 +67,8 @@ export default function Gifts() {
           </div>
           <div className="grid grid-cols-3 gap-3">
             {['spa-night-set', 'cinnamon-spice', 'eucalyptus-recovery-soak'].map((id, i) => { const p = byId(id); return p ? (
-              <Link key={id} to={`/product/${p.slug}`} className={`block aspect-[3/4] overflow-hidden rounded-2xl bg-pine-dark ${i === 1 ? 'mt-6' : ''}`}><ProductImage product={p} size={400} eager={i === 0} className="h-full w-full transition duration-300 hover:scale-105" /></Link>
-            ) : <div key={id} className={`aspect-[3/4] rounded-2xl bg-pine-dark ${i === 1 ? 'mt-6' : ''}`} />; })}
+              <Link key={id} to={`/product/${p.slug}`} className={`block aspect-[3/4] overflow-hidden rounded-img bg-pine-dark ${i === 1 ? 'mt-6' : ''}`}><ProductImage product={p} size={400} eager={i === 0} className="h-full w-full transition duration-300 hover:scale-105" /></Link>
+            ) : <div key={id} className={`aspect-[3/4] rounded-img bg-pine-dark ${i === 1 ? 'mt-6' : ''}`} />; })}
           </div>
         </div>
       </section>
@@ -100,7 +100,7 @@ export default function Gifts() {
         <SectionHead eyebrow="Shop by recipient" title="Who’s it for?" />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {RECIPIENTS.map((t) => { const p = byId(t.productId); return (
-            <Link key={t.to + t.label} to={t.to} className="group relative flex min-h-56 flex-col justify-end overflow-hidden rounded-2xl p-5 text-pine-ink transition hover:brightness-110" style={{ background: t.bg }}>
+            <Link key={t.to + t.label} to={t.to} className="group relative flex min-h-56 flex-col justify-end overflow-hidden rounded-img p-5 text-pine-ink transition hover:brightness-110" style={{ background: t.bg }}>
               {p && <ProductImage product={p} size={400} className="absolute inset-0 h-full w-full opacity-60 transition duration-300 group-hover:scale-105" />}
               <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" aria-hidden="true" />
               <span className="relative font-display text-xl font-semibold leading-tight">{t.label}</span>

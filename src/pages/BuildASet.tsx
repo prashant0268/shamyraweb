@@ -45,8 +45,8 @@ export default function BuildASet() {
           {SLOTS.map((s) => { const p = picks[s.key]; return (
             <section key={s.key}>
               <h2 className="mb-2 text-xl">{s.label}</h2>
-              <div className={`flex min-h-20 items-center gap-3 rounded-xl border-2 p-3 ${p ? 'border-pine bg-surface' : 'border-dashed border-line bg-surface'}`}>
-                {p ? <><div className="h-14 w-14 flex-none overflow-hidden rounded-lg bg-surface-2"><ProductImage product={p} size={400} className="h-full w-full" /></div><div className="min-w-0 flex-1"><div className="font-bold">{p.name}</div><div className="text-xs text-muted">{defaultVariant(p).label} · {money(defaultVariant(p).price)}</div></div><Button size="sm" variant="ghost" onClick={() => { setPicks({ ...picks, [s.key]: null }); setOpen(s.key); }}>Change</Button></> : <button className="flex-1 text-left text-muted" onClick={() => setOpen(s.key)}>Choose below ↓</button>}
+              <div className={`flex min-h-20 items-center gap-3 rounded-card border-2 p-3 ${p ? 'border-pine bg-surface' : 'border-dashed border-line bg-surface'}`}>
+                {p ? <><div className="h-14 w-14 flex-none overflow-hidden rounded-card bg-surface-2"><ProductImage product={p} size={400} className="h-full w-full" /></div><div className="min-w-0 flex-1"><div className="font-bold">{p.name}</div><div className="text-xs text-muted">{defaultVariant(p).label} · {money(defaultVariant(p).price)}</div></div><Button size="sm" variant="ghost" onClick={() => { setPicks({ ...picks, [s.key]: null }); setOpen(s.key); }}>Change</Button></> : <button className="flex-1 text-left text-muted" onClick={() => setOpen(s.key)}>Choose below ↓</button>}
               </div>
               {open === s.key && !p && (
                 <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">{options(s.kind).map((o) => { const used = chosen.some((c) => c.id === o.id); return (
