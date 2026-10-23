@@ -10,7 +10,7 @@ Kind Flames runs on two Firebase projects from the same codebase.
 | Frontend build | `npm run build` → `.env.production` | `npm run build:test` → `.env.test` |
 | Functions config | `functions/.env` + `functions/.env.shamyra-web` | `functions/.env` + `functions/.env.kindflames-test` |
 | `IS_PRODUCTION` | `true` | `false` |
-| Stripe | live keys | **test** keys (`sk_test_…`) |
+| Stripe | live keys (account "Kind Flames") | sandbox **Shamyra-Web-Sandbox** keys (`sk_test_…`) |
 | PayPal | live (`PAYPAL_MODE=live`) | sandbox only, cannot go live |
 | Google Analytics / Meta Pixel | on | off |
 | Search engines | indexed | `noindex,nofollow` on every page |
@@ -78,7 +78,7 @@ Nothing is shared between the two: separate Firestore, Auth users, Storage, Func
 
 ### Secrets for the test project
 
-Run from the repo root (each prompts for the value, or pipe it in). Use **Stripe test mode** keys and **PayPal
+Run from the repo root (each prompts for the value, or pipe it in). Use the **Shamyra-Web-Sandbox** Stripe sandbox keys (Stripe → Switch to sandbox → Shamyra-Web-Sandbox → Developers → API keys) and **PayPal
 sandbox** app credentials. The PayPal `*_LIVE` secrets must exist because the functions bind them; set them to the
 sandbox values (or any placeholder) — with `IS_PRODUCTION=false` they are never used.
 
@@ -107,7 +107,7 @@ firebase functions:secrets:set RESEND_API_KEY -P test
 Resend: either reuse the production key (emails will really send, so `ADMIN_EMAILS`/`OWNER_EMAIL` are the only
 recipients that matter during tests) or create a second Resend API key for the test project.
 
-Stripe webhook (only when `features.json` → `stripeWebhook` is on): in Stripe **test mode** → Developers →
+Stripe webhook (only when `features.json` → `stripeWebhook` is on): in the Stripe sandbox **Shamyra-Web-Sandbox** → Developers →
 Webhooks → Add endpoint `https://us-central1-kindflames-test.cloudfunctions.net/stripeWebhook`, event
 `checkout.session.completed`, then `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET -P test`.
 
