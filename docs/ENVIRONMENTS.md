@@ -107,7 +107,7 @@ firebase functions:secrets:set RESEND_API_KEY -P test
 Resend: either reuse the production key (emails will really send, so `ADMIN_EMAILS`/`OWNER_EMAIL` are the only
 recipients that matter during tests) or create a second Resend API key for the test project.
 
-Stripe webhook (only when `features.json` → `stripeWebhook` is on): in the Stripe sandbox **Shamyra-Web-Sandbox** → Developers →
+Stripe webhook (on for test via `functions/features.kindflames-test.json`; a `features.<projectId>.json` overrides `features.json` for that project only. Live on test since 2026-10-22): in the Stripe sandbox **Shamyra-Web-Sandbox** → Developers →
 Webhooks → Add endpoint `https://us-central1-kindflames-test.cloudfunctions.net/stripeWebhook`, event
 `checkout.session.completed`, then `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET -P test`.
 
