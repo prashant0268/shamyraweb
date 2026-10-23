@@ -39,7 +39,9 @@ const OWNER_EMAIL = ENV.OWNER_EMAIL || ADMIN_EMAILS[0] || "";
 const FROM_EMAIL = ENV.FROM_EMAIL || "Kind Flames <orders@kindflames.com>";
 // Feature flags that change which secrets a function binds live in features.json (read at both deploy-analysis
 // and runtime). .env values are NOT visible during the CLI's deploy analysis, so they can't gate secret bindings.
-const FEATURES = require("./features.json");
+// features.<projectId>.json (optional) overrides features.json for one project, e.g. the webhook only on test.
+const FEATURES_PROJECT = process.env.GCLOUD_PROJECT || (() => { try { return JSON.parse(process.env.FIREBASE_CONFIG || "{}").projectId; } catch { return ""; } })() || "";
+const FEATURES = (() => { const base = require("./features.json"); try { return { ...base, ...require(`./features.${FEATURES_PROJECT}.json`) }; } catch { return base; } })();
 const ENABLE_RESEND = FEATURES.resend === true;
 const ENABLE_STRIPE_WEBHOOK = FEATURES.stripeWebhook === true;
 const MAIL_SECRETS = ENABLE_RESEND ? ["RESEND_API_KEY"] : [];
