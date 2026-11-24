@@ -18,6 +18,7 @@ const { Client, Environment, OrdersController, PaymentsController } = require("@
 const CATALOG = require("./catalog.json");
 const { priceCart: pricePure, round2, cents, fmt, PricingError } = require("./pricing");
 const { createMarketing } = require("./marketing");
+const { allowedOrigins, paypalEnvFor, paypalEnvForOrder, evaluatePayPalOrder, paypalIssue, stripeSessionState } = require("./payments");
 
 initializeApp();
 const db = getFirestore();
@@ -44,28 +45,18 @@ const FEATURES_PROJECT = process.env.GCLOUD_PROJECT || (() => { try { return JSO
 const FEATURES = (() => { const base = require("./features.json"); try { return { ...base, ...require(`./features.${FEATURES_PROJECT}.json`) }; } catch { return base; } })();
 const ENABLE_RESEND = FEATURES.resend === true;
 const ENABLE_STRIPE_WEBHOOK = FEATURES.stripeWebhook === true;
+const ENABLE_PAYPAL_WEBHOOK = FEATURES.paypalWebhook === true;
 const MAIL_SECRETS = ENABLE_RESEND ? ["RESEND_API_KEY"] : [];
 const STRIPE_SECRETS = ["STRIPE_SECRET_KEY", ...MAIL_SECRETS];
-const PAYPAL_SECRETS = ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_CLIENT_ID_LIVE", "PAYPAL_CLIENT_SECRET_LIVE", "PAYPAL_MODE", ...MAIL_SECRETS];
-/** "kindflames.com" → ["kindflames.com", "www.kindflames.com"] (and the reverse); Firebase Hosting default domains
- *  have no www form; [] when there is no host. */
-const hostVariants = (host) => (!host ? [] : /\.(web\.app|firebaseapp\.com)$/.test(host) ? [host] : host.startsWith("www.") ? [host, host.slice(4)] : [host, `www.${host}`]);
-const SITE_HOST = (() => { try { return new URL(SITE_URL).hostname; } catch { return ""; } })();
+// PAYPAL_MODE is no longer read (the environment follows IS_PRODUCTION) and no longer bound; the secret can stay.
+const PAYPAL_SECRETS = ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_CLIENT_ID_LIVE", "PAYPAL_CLIENT_SECRET_LIVE", ...MAIL_SECRETS];
+const PAYMENT_SECRETS = [...new Set([...STRIPE_SECRETS, ...PAYPAL_SECRETS])];
 const EXTRA_ORIGINS = (ENV.EXTRA_ORIGINS || "").split(",").map((s) => s.trim().replace(/\/$/, "")).filter(Boolean);
-const LOCAL_ORIGINS = ["http://localhost:5173", "http://localhost:5174", "http://localhost:4173"];
-/** Browser origins allowed to start a checkout: the site (with/without www), this project's Firebase Hosting
- *  domains, EXTRA_ORIGINS from .env, and the Vite dev/preview ports. */
-const ALLOWED_ORIGINS = [...new Set([
-  SITE_URL,
-  ...hostVariants(SITE_HOST).map((h) => `https://${h}`),
-  ...(PROJECT_ID ? [`https://${PROJECT_ID}.web.app`, `https://${PROJECT_ID}.firebaseapp.com`] : []),
-  ...EXTRA_ORIGINS,
-  ...LOCAL_ORIGINS,
-])];
-/** Only these origins may use live PayPal; empty outside production, so a test project can never charge real money. */
-const PRODUCTION_HOSTS = IS_PRODUCTION ? hostVariants(SITE_HOST) : [];
-/** PAYPAL_MODE secret wins; otherwise live in production, sandbox everywhere else. */
-const PAYPAL_MODE_DEFAULT = IS_PRODUCTION ? "live" : "sandbox";
+/** Browser origins allowed to start a checkout (localhost only outside production); see payments.allowedOrigins. */
+const ALLOWED_ORIGINS = allowedOrigins({ siteUrl: SITE_URL, projectId: PROJECT_ID, extraOrigins: EXTRA_ORIGINS, isProduction: IS_PRODUCTION });
+/** PayPal environment for this project: live in production, sandbox everywhere else. Never chosen from the
+ *  browser's origin; stored on each order as paypalEnv and read back from there for capture and refund. */
+const PAYPAL_ENV = paypalEnvFor(IS_PRODUCTION);
 
 const { DEFAULT_SETTINGS } = require("./defaults");
 
@@ -108,7 +99,7 @@ async function nextOrderNumber() {
   });
 }
 
-async function createPendingOrder({ uid, email, pricing, shippingAddress, gift, paymentMethod, origin }) {
+async function createPendingOrder({ uid, email, pricing, shippingAddress, gift, paymentMethod, origin, extra = {} }) {
   const number = await nextOrderNumber();
   const ref = db.collection("orders").doc();
   const order = {
@@ -119,20 +110,22 @@ async function createPendingOrder({ uid, email, pricing, shippingAddress, gift, 
     shippingAddress, gift: { isGift: !!gift?.isGift, wrap: !!gift?.wrap, message: String(gift?.message || "").slice(0, 300) },
     paymentMethod, paymentStatus: "pending", status: "pending", origin: origin || "",
     tracking: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), paidAt: null,
+    ...extra,
   };
   await ref.set(order);
   return { id: ref.id, ...order };
 }
 
-/** Idempotently marks an order paid, decrements stock, counts discount usage, sends emails. */
-async function markOrderPaid(orderId, payment) {
+/** Idempotently marks an order paid, decrements stock, counts discount usage, sends emails.
+ *  Callers must have verified the payment with the provider first. extra: more fields to write with the status. */
+async function markOrderPaid(orderId, payment, extra = {}) {
   const ref = db.doc(`orders/${orderId}`);
   const result = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
     const order = snap.data();
     if (order.paymentStatus === "paid") return { already: true, order: { id: snap.id, ...order } };
-    tx.update(ref, { paymentStatus: "paid", status: "paid", paidAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), payment: payment || {} });
+    tx.update(ref, { ...extra, paymentStatus: "paid", status: "paid", paidAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), payment: payment || {} });
     return { already: false, order: { id: snap.id, ...order, paymentStatus: "paid", status: "paid" } };
   });
   if (result.already) return result.order;
@@ -163,7 +156,6 @@ function assertOrigin(origin) {
   if (!ALLOWED_ORIGINS.includes(o)) throw new HttpsError("permission-denied", "Unknown origin.");
   return o;
 }
-function isProductionOrigin(origin) { try { return PRODUCTION_HOSTS.includes(new URL(origin).hostname); } catch { return false; } }
 function requireAuth(request) { if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in or continue as guest."); return request.auth.uid; }
 function requireAdmin(request) { if (!request.auth?.token?.admin) throw new HttpsError("permission-denied", "Admins only."); return request.auth.uid; }
 
@@ -182,7 +174,8 @@ exports.createStripeCheckout = onCall({ cors: true, secrets: STRIPE_SECRETS }, a
   const data = request.data || {};
   const origin = assertOrigin(data.origin);
   const settings = await getSettings();
-  if (isProductionOrigin(origin) && !settings.cardPaymentsEnabled) throw new HttpsError("failed-precondition", "Card payments are not enabled yet. Please use PayPal.");
+  // Production honours the admin switch whatever origin the browser claims; test projects always allow cards.
+  if (IS_PRODUCTION && !settings.cardPaymentsEnabled) throw new HttpsError("failed-precondition", "Card payments are not enabled yet. Please use PayPal.");
   const shippingAddress = cleanAddress(data.shippingAddress);
   const pricing = await priceCart({ ...data, shippingAddress }, settings, uid);
   const order = await createPendingOrder({ uid, email: data.email, pricing, shippingAddress, gift: data.gift, paymentMethod: "stripe", origin });
@@ -212,43 +205,146 @@ exports.createStripeCheckout = onCall({ cors: true, secrets: STRIPE_SECRETS }, a
   return { orderId: order.id, orderNumber: order.number, url: session.url };
 });
 
+const stripePayment = (s, source) => ({
+  provider: "stripe", sessionId: s.id, paymentIntentId: typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id || null,
+  payerEmail: s.customer_details?.email || null, amount: s.amount_total != null ? s.amount_total / 100 : null, currency: s.currency || null,
+  stripePaymentStatus: s.payment_status || null, source,
+});
+
+/** Re-reads a Stripe Checkout Session for one of our orders and applies it. Returns { state, order? }. */
+async function reconcileStripe(order, source) {
+  let session;
+  try { session = await getStripe().checkout.sessions.retrieve(String(order.stripeSessionId)); }
+  catch (e) { if (e?.statusCode === 404 || e?.code === "resource_missing") return { state: "not_found" }; throw e; }
+  if (session.metadata?.orderId !== order.id) { console.error("stripe session/order mismatch", order.id, session.id); return { state: "mismatch" }; }
+  return applyStripeSession(order, session, source);
+}
+async function applyStripeSession(order, session, source) {
+  const state = stripeSessionState(session);
+  if (state === "paid") return { state, order: await markOrderPaid(order.id, stripePayment(session, source)) };
+  if (state === "processing" && order.stripePaymentStatus !== "processing") {
+    await db.doc(`orders/${order.id}`).update({ stripePaymentStatus: "processing", updatedAt: FieldValue.serverTimestamp() });
+  }
+  return { state };
+}
+
 exports.verifyStripePayment = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
   const uid = requireAuth(request);
   const { sessionId, orderId } = request.data || {};
   if (!sessionId || !orderId) throw new HttpsError("invalid-argument", "Missing session.");
   const snap = await db.doc(`orders/${orderId}`).get();
   if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
-  if (snap.data().userId !== uid && !request.auth.token.admin) throw new HttpsError("permission-denied", "Not your order.");
-  const stripe = getStripe();
-  const session = await stripe.checkout.sessions.retrieve(String(sessionId));
+  const order = { id: snap.id, ...snap.data() };
+  if (order.userId !== uid && !request.auth.token.admin) throw new HttpsError("permission-denied", "Not your order.");
+  if (order.stripeSessionId && order.stripeSessionId !== String(sessionId)) throw new HttpsError("permission-denied", "Session does not match order.");
+  const session = await getStripe().checkout.sessions.retrieve(String(sessionId));
   if (session.metadata?.orderId !== orderId) throw new HttpsError("permission-denied", "Session does not match order.");
-  if (session.payment_status !== "paid") return { paid: false, status: session.payment_status };
-  const order = await markOrderPaid(orderId, { provider: "stripe", sessionId: session.id, paymentIntentId: session.payment_intent, payerEmail: session.customer_details?.email || null });
-  return { paid: true, order: publicOrder(order) };
+  const { state, order: paid } = await applyStripeSession(order, session, "verify");
+  if (state !== "paid") return { paid: false, status: state === "processing" ? "processing" : session.payment_status };
+  return { paid: true, order: publicOrder(paid) };
 });
 
+/** Finds our order for a Stripe PaymentIntent (charge / dispute events). */
+async function findOrderByPaymentIntent(stripe, paymentIntentId) {
+  if (!paymentIntentId) return null;
+  const pi = typeof paymentIntentId === "string" ? paymentIntentId : paymentIntentId.id;
+  const q = await db.collection("orders").where("payment.paymentIntentId", "==", pi).limit(1).get();
+  if (!q.empty) return { id: q.docs[0].id, ...q.docs[0].data() };
+  const intent = await stripe.paymentIntents.retrieve(pi).catch(() => null);
+  const orderId = intent?.metadata?.orderId;
+  if (!orderId) return null;
+  const snap = await db.doc(`orders/${orderId}`).get();
+  return snap.exists ? { id: snap.id, ...snap.data() } : null;
+}
+
+/** Records a full or partial refund on an order (from a provider event; refundOrder writes its own). */
+async function applyRefund(order, { full, amount, provider, source }) {
+  const update = { paymentStatus: full ? "refunded" : "partially_refunded", refundedAmount: amount ?? null, refundSource: `${provider}:${source}`, updatedAt: FieldValue.serverTimestamp() };
+  if (full && order.status !== "refunded") update.status = "refunded";
+  await db.doc(`orders/${order.id}`).update(update);
+}
+
+async function notifyOwner(subject, body) {
+  return sendMail({ to: OWNER_EMAIL, subject, html: wrapEmail(body) }).catch((e) => console.error("owner mail failed", e.message));
+}
+const orderLink = (o) => `<a href="${SITE_URL}/admin/orders">Order ${esc(o.number || o.id)}</a>`;
+
+async function handleStripeEvent(stripe, event) {
+  const obj = event.data.object;
+  switch (event.type) {
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded": {
+      const orderId = obj.metadata?.orderId;
+      if (!orderId || obj.mode !== "payment") return; // subscription checkouts are handled by verifySubscription
+      const snap = await db.doc(`orders/${orderId}`).get();
+      if (!snap.exists) { console.error("stripe webhook: order not found", orderId, obj.id); return; }
+      const order = { id: snap.id, ...snap.data() };
+      if (order.stripeSessionId && order.stripeSessionId !== obj.id) { console.error("stripe webhook: session mismatch", orderId, obj.id); return; }
+      await applyStripeSession(order, obj, "webhook");
+      return;
+    }
+    case "checkout.session.async_payment_failed": {
+      const orderId = obj.metadata?.orderId;
+      if (!orderId || obj.mode !== "payment") return;
+      const snap = await db.doc(`orders/${orderId}`).get();
+      if (!snap.exists || snap.data().paymentStatus === "paid") return;
+      await snap.ref.update({ paymentStatus: "failed", stripePaymentStatus: "failed", updatedAt: FieldValue.serverTimestamp() });
+      await notifyOwner(`Payment failed for order ${snap.data().number}`, `<p>The delayed card/bank payment for ${orderLink({ id: snap.id, ...snap.data() })} failed. The order was not marked paid; don't ship it.</p>`);
+      return;
+    }
+    case "charge.refunded": {
+      const order = await findOrderByPaymentIntent(stripe, obj.payment_intent);
+      if (!order) { console.error("stripe webhook: no order for refunded charge", obj.id); return; }
+      const full = obj.refunded === true || obj.amount_refunded >= obj.amount;
+      await applyRefund(order, { full, amount: obj.amount_refunded / 100, provider: "stripe", source: "webhook" });
+      return;
+    }
+    case "charge.dispute.created": {
+      const order = await findOrderByPaymentIntent(stripe, obj.payment_intent);
+      const dispute = { id: obj.id, reason: obj.reason || null, status: obj.status || null, amount: obj.amount != null ? obj.amount / 100 : null, evidenceDueBy: obj.evidence_details?.due_by || null };
+      if (order) await db.doc(`orders/${order.id}`).update({ dispute, updatedAt: FieldValue.serverTimestamp() });
+      const due = dispute.evidenceDueBy ? new Date(dispute.evidenceDueBy * 1000).toDateString() : "see Stripe";
+      await notifyOwner(`Stripe dispute opened${order ? ` on order ${order.number}` : ""} — ${dispute.amount != null ? fmt(dispute.amount) : ""}`,
+        `<p>A customer disputed a card payment${order ? ` for ${orderLink(order)} (${esc(order.customerName)}, ${esc(order.email)})` : ` (charge ${esc(obj.charge)}; no matching order found)`}.</p><ul><li>Reason: ${esc(dispute.reason)}</li><li>Amount: ${dispute.amount != null ? fmt(dispute.amount) : "?"}</li><li>Evidence due: ${esc(due)}</li></ul><p>Respond in the Stripe dashboard → Payments → Disputes. Hold the shipment if it hasn't gone out.</p>`);
+      return;
+    }
+    default:
+      return;
+  }
+}
+
 if (ENABLE_STRIPE_WEBHOOK) {
+  // Endpoint: https://us-central1-<projectId>.cloudfunctions.net/stripeWebhook. Events: checkout.session.completed,
+  // checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, charge.refunded,
+  // charge.dispute.created. See docs/ENVIRONMENTS.md ("Payment webhooks").
   exports.stripeWebhook = onRequest({ secrets: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", ...MAIL_SECRETS] }, async (req, res) => {
     const stripe = getStripe();
     let event;
     try { event = stripe.webhooks.constructEvent(req.rawBody, req.headers["stripe-signature"], process.env.STRIPE_WEBHOOK_SECRET); }
     catch (e) { console.error("webhook signature failed", e.message); return res.status(400).send("bad signature"); }
-    if (event.type === "checkout.session.completed") {
-      const s = event.data.object;
-      if (s.payment_status === "paid" && s.metadata?.orderId) await markOrderPaid(s.metadata.orderId, { provider: "stripe", sessionId: s.id, paymentIntentId: s.payment_intent, payerEmail: s.customer_details?.email || null });
-    }
+    try { await handleStripeEvent(stripe, event); }
+    catch (e) { console.error("stripe webhook handler failed", event.type, event.id, e.message); return res.status(500).send("retry"); }
     res.json({ received: true });
   });
 }
 
 /* -------------------------------- PayPal --------------------------------- */
-function getPayPalClient(origin) {
-  const mode = (process.env.PAYPAL_MODE || "").trim() || PAYPAL_MODE_DEFAULT;
-  const wantLive = mode === "live" && isProductionOrigin(origin);
-  const clientId = (wantLive ? process.env.PAYPAL_CLIENT_ID_LIVE : process.env.PAYPAL_CLIENT_ID || "").trim();
-  const clientSecret = (wantLive ? process.env.PAYPAL_CLIENT_SECRET_LIVE : process.env.PAYPAL_CLIENT_SECRET || "").trim();
-  if (!clientId || !clientSecret) throw new HttpsError("failed-precondition", `PayPal ${wantLive ? "live" : "sandbox"} credentials are not configured.`);
-  return new Client({ clientCredentialsAuthCredentials: { oAuthClientId: clientId, oAuthClientSecret: clientSecret }, environment: wantLive ? Environment.Production : Environment.Sandbox });
+const PAYPAL_API = { live: "https://api-m.paypal.com", sandbox: "https://api-m.sandbox.paypal.com" };
+function paypalCreds(env) {
+  if (env !== PAYPAL_ENV) throw new HttpsError("failed-precondition", `This project only uses PayPal ${PAYPAL_ENV}.`);
+  const live = env === "live";
+  const clientId = ((live ? process.env.PAYPAL_CLIENT_ID_LIVE : process.env.PAYPAL_CLIENT_ID) || "").trim();
+  const clientSecret = ((live ? process.env.PAYPAL_CLIENT_SECRET_LIVE : process.env.PAYPAL_CLIENT_SECRET) || "").trim();
+  if (!clientId || !clientSecret) throw new HttpsError("failed-precondition", `PayPal ${env} credentials are not configured.`);
+  return { clientId, clientSecret };
+}
+/** env is "live" | "sandbox" — from PAYPAL_ENV for new orders, from order.paypalEnv afterwards. Never from the origin. */
+function getPayPalClient(env) {
+  const { clientId, clientSecret } = paypalCreds(env);
+  return new Client({ clientCredentialsAuthCredentials: { oAuthClientId: clientId, oAuthClientSecret: clientSecret }, environment: env === "live" ? Environment.Production : Environment.Sandbox });
+}
+function orderPayPalEnv(order) {
+  try { return paypalEnvForOrder(order, IS_PRODUCTION); } catch (e) { throw new HttpsError("failed-precondition", e.message); }
 }
 
 exports.createPayPalOrder = onCall({ cors: true, secrets: PAYPAL_SECRETS }, async (request) => {
@@ -259,13 +355,13 @@ exports.createPayPalOrder = onCall({ cors: true, secrets: PAYPAL_SECRETS }, asyn
   if (!settings.paypalEnabled) throw new HttpsError("failed-precondition", "PayPal is not enabled.");
   const shippingAddress = cleanAddress(data.shippingAddress);
   const pricing = await priceCart({ ...data, shippingAddress }, settings, uid);
-  const order = await createPendingOrder({ uid, email: data.email, pricing, shippingAddress, gift: data.gift, paymentMethod: "paypal", origin });
+  const client = getPayPalClient(PAYPAL_ENV); // fail before writing an order if credentials are missing
+  const order = await createPendingOrder({ uid, email: data.email, pricing, shippingAddress, gift: data.gift, paymentMethod: "paypal", origin, extra: { paypalEnv: PAYPAL_ENV } });
 
   const usd = (v) => ({ currencyCode: "USD", value: Number(v).toFixed(2) });
   const items = pricing.lines.map((l) => ({ name: `${l.name} — ${l.variantLabel}`.slice(0, 127), quantity: String(l.quantity), unitAmount: usd(l.unitPrice), category: "PHYSICAL_GOODS" }));
   if (pricing.giftWrap) items.push({ name: "Gift box & card", quantity: "1", unitAmount: usd(pricing.giftWrap), category: "PHYSICAL_GOODS" });
   const itemTotal = round2(pricing.subtotal + pricing.giftWrap);
-  const client = getPayPalClient(origin);
   const { result } = await new OrdersController(client).createOrder({
     body: {
       intent: "CAPTURE",
@@ -283,19 +379,205 @@ exports.createPayPalOrder = onCall({ cors: true, secrets: PAYPAL_SECRETS }, asyn
   return { orderId: order.id, orderNumber: order.number, paypalOrderId: result.id };
 });
 
+/** Captures an approved PayPal order; a retry after a successful capture (ORDER_ALREADY_CAPTURED) reads the order instead. */
+async function capturePayPal(ctl, paypalOrderId) {
+  try { return (await ctl.captureOrder({ id: paypalOrderId, prefer: "return=representation" })).result; }
+  catch (e) {
+    if (paypalIssue(e) !== "ORDER_ALREADY_CAPTURED") throw e;
+    return (await ctl.getOrder({ id: paypalOrderId })).result;
+  }
+}
+
+/**
+ * Applies a PayPal order (capture or getOrder result) to our order after validating the capture: only a COMPLETED
+ * capture of exactly order.total USD marks it paid. Returns { state, order? } (states: see evaluatePayPalOrder).
+ */
+async function applyPayPalOrder(order, result, source) {
+  const ref = db.doc(`orders/${order.id}`);
+  const v = evaluatePayPalOrder(result, order);
+  const cap = v.capture;
+  const track = { paypalOrderStatus: result?.status || null, paypalCaptureId: cap?.id || null, paypalCaptureStatus: cap?.status || null, updatedAt: FieldValue.serverTimestamp() };
+  const payerEmail = result?.payer?.emailAddress || result?.payer?.email_address || null;
+  switch (v.state) {
+    case "paid": {
+      const paid = await markOrderPaid(order.id, { provider: "paypal", paypalOrderId: order.paypalOrderId, captureId: cap.id, payerEmail, amount: Number(cap.value), currency: cap.currency, env: orderPayPalEnv(order), source }, track);
+      return { state: "paid", order: paid };
+    }
+    case "pending": {
+      if (order.paymentStatus === "paid") return { state: "paid", order };
+      const first = !order.pendingNotifiedAt;
+      await ref.update({ ...track, paypalPendingReason: v.reason, ...(first ? { pendingNotifiedAt: FieldValue.serverTimestamp() } : {}) });
+      if (first) await notifyOwner(`PayPal payment pending for order ${order.number}`, `<p>PayPal accepted the payment for ${orderLink(order)} (${fmt(order.total)}) but is holding it: <b>${esc(v.reason)}</b>.</p><p>The order stays <b>pending</b> until PayPal completes the capture; it is re-checked every 30 minutes. Don't ship until it shows paid. Details in PayPal → Activity.</p>`);
+      return { state: "pending" };
+    }
+    case "failed": {
+      if (order.paymentStatus === "paid") return { state: "paid", order };
+      await ref.update({ ...track, paymentStatus: "failed" });
+      if (order.paypalCaptureStatus === "PENDING") await notifyOwner(`PayPal payment denied for order ${order.number}`, `<p>The pending PayPal payment for ${orderLink(order)} was <b>${esc(v.reason)}</b>. The order was never marked paid; don't ship it.</p>`);
+      return { state: "failed" };
+    }
+    case "refunded": {
+      await applyRefund(order, { full: cap.status === "REFUNDED", amount: null, provider: "paypal", source });
+      return { state: "refunded" };
+    }
+    case "mismatch": {
+      if (order.paymentStatus === "paid") return { state: "paid", order };
+      const first = !order.paymentReview;
+      await ref.update({ ...track, paymentReview: { reason: v.reason, source, at: new Date().toISOString() } });
+      if (first) await notifyOwner(`Check PayPal payment for order ${order.number}`, `<p>PayPal reports a capture for ${orderLink(order)} that does not match the order, so it was <b>not</b> marked paid: ${esc(v.reason)}.</p><p>Compare it in PayPal → Activity and refund it there if it isn't legitimate.</p>`);
+      return { state: "mismatch" };
+    }
+    default:
+      return { state: v.state };
+  }
+}
+
+/** Asks PayPal about one of our orders and applies the answer. captureApproved: capture an order the buyer approved
+ *  but whose browser never called capturePayPalOrder (the buyer pressed "Pay Now"; this finishes their payment). */
+async function reconcilePayPal(order, { captureApproved = false, source }) {
+  const ctl = new OrdersController(getPayPalClient(orderPayPalEnv(order)));
+  let result;
+  try { result = (await ctl.getOrder({ id: String(order.paypalOrderId) })).result; }
+  catch (e) { if (e?.statusCode === 404) return { state: "not_found" }; throw e; }
+  if (captureApproved && result?.status === "APPROVED") {
+    try { result = await capturePayPal(ctl, String(order.paypalOrderId)); }
+    catch (e) { console.error("reconcile capture failed", order.id, paypalIssue(e) || e.message); return { state: "approved" }; }
+  }
+  return applyPayPalOrder(order, result, source);
+}
+
+/** What the payment provider says about an order. Throws when the provider can't be reached. */
+async function reconcileOrder(order, opts) {
+  if (order.paymentStatus === "paid") return { state: "paid", order };
+  if (order.stripeSessionId) return reconcileStripe(order, opts.source);
+  if (order.paypalOrderId) return reconcilePayPal(order, opts);
+  return { state: "none" };
+}
+/** Provider states that mean money moved (or is moving): never delete or nag those orders. */
+const MONEY_STATES = ["paid", "pending", "processing", "mismatch", "refunded"];
+
 exports.capturePayPalOrder = onCall({ cors: true, secrets: PAYPAL_SECRETS }, async (request) => {
   const uid = requireAuth(request);
   const { paypalOrderId, orderId } = request.data || {};
   if (!paypalOrderId || !orderId) throw new HttpsError("invalid-argument", "Missing order.");
   const snap = await db.doc(`orders/${orderId}`).get();
   if (!snap.exists || snap.data().userId !== uid) throw new HttpsError("permission-denied", "Not your order.");
-  if (snap.data().paypalOrderId !== paypalOrderId) throw new HttpsError("permission-denied", "PayPal order does not match.");
-  const client = getPayPalClient(snap.data().origin);
-  const { result } = await new OrdersController(client).captureOrder({ id: paypalOrderId, prefer: "return=representation" });
-  if (result.status !== "COMPLETED") return { paid: false, status: result.status };
-  const capture = result.purchaseUnits?.[0]?.payments?.captures?.[0];
-  const order = await markOrderPaid(orderId, { provider: "paypal", paypalOrderId, captureId: capture?.id || null, payerEmail: result.payer?.emailAddress || null });
-  return { paid: true, order: publicOrder(order) };
+  const order = { id: snap.id, ...snap.data() };
+  if (order.paypalOrderId !== paypalOrderId) throw new HttpsError("permission-denied", "PayPal order does not match.");
+  if (order.paymentStatus === "paid") return { paid: true, order: publicOrder(order) };
+  const ctl = new OrdersController(getPayPalClient(orderPayPalEnv(order)));
+  let result;
+  try { result = await capturePayPal(ctl, paypalOrderId); }
+  catch (e) {
+    const issue = paypalIssue(e);
+    console.error("paypal capture failed", orderId, issue || e.message);
+    if (issue === "INSTRUMENT_DECLINED") throw new HttpsError("failed-precondition", "PayPal declined that payment method. Please try another one.");
+    throw new HttpsError("internal", "PayPal could not complete the payment. You have not been charged; please try again.");
+  }
+  const outcome = await applyPayPalOrder(order, result, "capture");
+  if (outcome.state === "paid") return { paid: true, order: publicOrder(outcome.order) };
+  if (outcome.state === "pending") return { paid: false, status: "PENDING", message: "PayPal is reviewing this payment. We'll email you as soon as it clears; there's no need to pay again." };
+  if (outcome.state === "mismatch") return { paid: false, status: "REVIEW", message: "We received a payment we need to check by hand. We'll email you shortly; please don't pay again." };
+  return { paid: false, status: result?.status || outcome.state };
+});
+
+if (ENABLE_PAYPAL_WEBHOOK) {
+  /** Exchanges the project's PayPal credentials for an access token (REST, for the webhook verification API). */
+  const paypalAccessToken = async (env) => {
+    const { clientId, clientSecret } = paypalCreds(env);
+    const r = await fetch(`${PAYPAL_API[env]}/v1/oauth2/token`, { method: "POST", headers: { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" }, body: "grant_type=client_credentials" });
+    if (!r.ok) throw new Error(`PayPal token request failed: ${r.status}`);
+    return (await r.json()).access_token;
+  };
+  /** PayPal's verify-webhook-signature API. rawBody must already have parsed as a single JSON object (checked by the
+   *  caller), so splicing it in verbatim cannot inject extra fields such as a different webhook_id. */
+  const verifyPayPalWebhook = async (headers, rawBody) => {
+    const webhookId = (process.env.PAYPAL_WEBHOOK_ID || "").trim();
+    if (!webhookId) throw new Error("PAYPAL_WEBHOOK_ID is not set");
+    const names = { auth_algo: "paypal-auth-algo", cert_url: "paypal-cert-url", transmission_id: "paypal-transmission-id", transmission_sig: "paypal-transmission-sig", transmission_time: "paypal-transmission-time" };
+    const fields = Object.entries(names).map(([k, h]) => [k, headers[h]]);
+    if (fields.some(([, v]) => !v || typeof v !== "string")) return false;
+    const body = `{${fields.map(([k, v]) => `${JSON.stringify(k)}:${JSON.stringify(v)}`).join(",")},"webhook_id":${JSON.stringify(webhookId)},"webhook_event":${rawBody}}`;
+    const r = await fetch(`${PAYPAL_API[PAYPAL_ENV]}/v1/notifications/verify-webhook-signature`, { method: "POST", headers: { Authorization: `Bearer ${await paypalAccessToken(PAYPAL_ENV)}`, "Content-Type": "application/json" }, body });
+    if (!r.ok) { console.error("paypal verify-webhook-signature", r.status, (await r.text()).slice(0, 300)); return false; }
+    return (await r.json()).verification_status === "SUCCESS";
+  };
+  const findOrderForCapture = async (resource) => {
+    const paypalOrderId = resource.supplementary_data?.related_ids?.order_id || null;
+    if (resource.custom_id) {
+      const snap = await db.doc(`orders/${String(resource.custom_id)}`).get();
+      if (snap.exists && (!paypalOrderId || snap.data().paypalOrderId === paypalOrderId)) return { id: snap.id, ...snap.data() };
+    }
+    if (!paypalOrderId) return null;
+    const q = await db.collection("orders").where("paypalOrderId", "==", paypalOrderId).limit(1).get();
+    return q.empty ? null : { id: q.docs[0].id, ...q.docs[0].data() };
+  };
+  const handlePayPalEvent = async (event) => {
+    const resource = event.resource || {};
+    switch (event.event_type) {
+      case "PAYMENT.CAPTURE.COMPLETED":
+      case "PAYMENT.CAPTURE.PENDING":
+      case "PAYMENT.CAPTURE.DENIED": {
+        const order = await findOrderForCapture(resource);
+        if (!order) { console.error("paypal webhook: no order for capture", resource.id); return; }
+        // Never trust the event body for money: re-read the order from PayPal and run the same checks as capture.
+        await reconcilePayPal(order, { captureApproved: false, source: "webhook" });
+        return;
+      }
+      case "PAYMENT.CAPTURE.REFUNDED": {
+        const up = (resource.links || []).find((l) => l.rel === "up")?.href || "";
+        const captureId = up.match(/\/captures\/([^/?]+)/)?.[1];
+        if (!captureId) { console.error("paypal webhook: refund without capture link", resource.id); return; }
+        let q = await db.collection("orders").where("payment.captureId", "==", captureId).limit(1).get();
+        if (q.empty) q = await db.collection("orders").where("paypalCaptureId", "==", captureId).limit(1).get();
+        if (q.empty) { console.error("paypal webhook: no order for refunded capture", captureId); return; }
+        const order = { id: q.docs[0].id, ...q.docs[0].data() };
+        const { result: capture } = await new PaymentsController(getPayPalClient(orderPayPalEnv(order))).getCapturedPayment({ captureId });
+        if (!["REFUNDED", "PARTIALLY_REFUNDED"].includes(capture?.status)) return;
+        await applyRefund(order, { full: capture.status === "REFUNDED", amount: null, provider: "paypal", source: "webhook" });
+        return;
+      }
+      default:
+        return;
+    }
+  };
+
+  // Endpoint: https://us-central1-<projectId>.cloudfunctions.net/paypalWebhook. See docs/ENVIRONMENTS.md ("Payment webhooks").
+  exports.paypalWebhook = onRequest({ secrets: [...PAYPAL_SECRETS, "PAYPAL_WEBHOOK_ID"] }, async (req, res) => {
+    if (req.method !== "POST") return res.status(405).send("Method not allowed");
+    const raw = req.rawBody ? req.rawBody.toString("utf8") : "";
+    let event;
+    try { event = JSON.parse(raw); } catch { return res.status(400).send("bad body"); }
+    if (!event || typeof event !== "object" || Array.isArray(event)) return res.status(400).send("bad body");
+    let ok;
+    try { ok = await verifyPayPalWebhook(req.headers, raw); }
+    catch (e) { console.error("paypal webhook verification error", e.message); return res.status(500).send("retry"); }
+    if (!ok) return res.status(400).send("bad signature");
+    try { await handlePayPalEvent(event); }
+    catch (e) { console.error("paypal webhook handler failed", event.event_type, event.id, e.message); return res.status(500).send("retry"); }
+    res.json({ received: true });
+  });
+}
+
+/* ------------------------------ reconciliation ----------------------------- */
+// Every 30 minutes: pending orders older than 15 minutes (up to 7 days) that reached Stripe or PayPal are checked
+// with the provider and marked paid when paid. Covers buyers whose browser never came back and projects without
+// webhooks. Approved-but-uncaptured PayPal orders are captured (the buyer already pressed "Pay Now").
+exports.reconcilePendingPayments = onSchedule({ schedule: "every 30 minutes", timeoutSeconds: 300, secrets: PAYMENT_SECRETS }, async () => {
+  const now = Date.now();
+  const snap = await db.collection("orders").where("status", "==", "pending").orderBy("createdAt", "desc").limit(300).get();
+  const counts = {};
+  for (const d of snap.docs) {
+    const o = { id: d.id, ...d.data() };
+    const age = now - (o.createdAt?.toMillis ? o.createdAt.toMillis() : now);
+    if (age < 15 * 60e3 || age > 7 * 864e5 || o.paymentStatus === "paid") continue;
+    if (!o.stripeSessionId && !o.paypalOrderId) continue;
+    try {
+      const { state } = await reconcileOrder(o, { captureApproved: true, source: "reconciler" });
+      counts[state] = (counts[state] || 0) + 1;
+    } catch (e) { counts.error = (counts.error || 0) + 1; console.error("reconcile failed", o.id, e.message); }
+  }
+  console.log("reconcilePendingPayments", JSON.stringify(counts));
 });
 
 /* --------------------------------- admin --------------------------------- */
@@ -330,7 +612,7 @@ exports.updateOrderStatus = onCall({ cors: true, secrets: MAIL_SECRETS }, async 
   return { ok: true };
 });
 
-exports.refundOrder = onCall({ cors: true, secrets: [...new Set([...STRIPE_SECRETS, ...PAYPAL_SECRETS])] }, async (request) => {
+exports.refundOrder = onCall({ cors: true, secrets: PAYMENT_SECRETS }, async (request) => {
   requireAdmin(request);
   const { orderId } = request.data || {};
   const ref = db.doc(`orders/${orderId}`);
@@ -341,7 +623,7 @@ exports.refundOrder = onCall({ cors: true, secrets: [...new Set([...STRIPE_SECRE
   if (order.payment?.provider === "stripe" && order.payment.paymentIntentId) {
     await getStripe().refunds.create({ payment_intent: order.payment.paymentIntentId });
   } else if (order.payment?.provider === "paypal" && order.payment.captureId) {
-    await new PaymentsController(getPayPalClient(order.origin)).refundCapturedPayment({ captureId: order.payment.captureId, prefer: "return=minimal" });
+    await new PaymentsController(getPayPalClient(orderPayPalEnv(order))).refundCapturedPayment({ captureId: order.payment.captureId, prefer: "return=minimal" });
   } else {
     throw new HttpsError("failed-precondition", "No refundable payment on this order.");
   }
@@ -363,7 +645,9 @@ exports.onReviewWritten = onDocumentWritten("reviews/{reviewId}", async (event) 
 
 /* ------------------------------- corporate -------------------------------- */
 // Admin-only: remove an order that was never paid (abandoned checkout, test order). Paid orders must be refunded, not deleted.
-exports.deleteOrder = onCall({ cors: true }, async (request) => {
+// Orders that reached Stripe/PayPal are checked with the provider first: a payment the browser never reported
+// (closed tab, no webhook) is marked paid instead of being deleted.
+exports.deleteOrder = onCall({ cors: true, secrets: PAYMENT_SECRETS }, async (request) => {
   requireAdmin(request);
   const { orderId } = request.data || {};
   if (!orderId || typeof orderId !== "string") throw new HttpsError("invalid-argument", "orderId required.");
@@ -373,6 +657,16 @@ exports.deleteOrder = onCall({ cors: true }, async (request) => {
   const o = snap.data();
   if (o.paymentStatus === "paid" || ["paid", "fulfilled", "shipped", "delivered"].includes(o.status)) {
     throw new HttpsError("failed-precondition", "Paid orders can't be deleted. Refund or cancel instead.");
+  }
+  if (o.stripeSessionId || o.paypalOrderId) {
+    let check;
+    try { check = await reconcileOrder({ id: snap.id, ...o }, { captureApproved: false, source: "admin-delete" }); }
+    catch (e) {
+      console.error("deleteOrder provider check failed", orderId, e.message);
+      throw new HttpsError("unavailable", "Couldn't confirm with Stripe/PayPal that this order is unpaid, so it was not deleted. Try again in a few minutes.");
+    }
+    if (check.state === "paid") throw new HttpsError("failed-precondition", "The payment provider reports this order as paid, so it is now marked paid. Refund it instead of deleting it.");
+    if (MONEY_STATES.includes(check.state)) throw new HttpsError("failed-precondition", `The payment provider reports a payment on this order (${check.state}), so it can't be deleted.`);
   }
   await ref.delete();
   return { ok: true };
@@ -432,7 +726,7 @@ exports.createSubscriptionCheckout = onCall({ cors: true, secrets: STRIPE_SECRET
   const plan = PLANS[data.plan];
   if (!plan) throw new HttpsError("invalid-argument", "Unknown plan.");
   const settings = await getSettings();
-  if (isProductionOrigin(origin) && !settings.cardPaymentsEnabled) throw new HttpsError("failed-precondition", "Subscriptions open once card payments are enabled.");
+  if (IS_PRODUCTION && !settings.cardPaymentsEnabled) throw new HttpsError("failed-precondition", "Subscriptions open once card payments are enabled.");
   const shippingAddress = cleanAddress(data.shippingAddress);
   const email = String(data.email || request.auth.token.email || "").toLowerCase().slice(0, 200);
   if (!email) throw new HttpsError("invalid-argument", "Email is required.");
@@ -552,7 +846,7 @@ exports.createSubscriptionShipments = onCall({ cors: true, secrets: MAIL_SECRETS
 function publicSub(s) { const { stripeCustomerId, ...rest } = s; return { ...rest, createdAt: null, updatedAt: null }; }
 
 /* --------------------------- scheduled reminders -------------------------- */
-exports.abandonedCartReminder = onSchedule({ schedule: "every day 15:00", timeZone: "America/New_York", secrets: MAIL_SECRETS }, async () => {
+exports.abandonedCartReminder = onSchedule({ schedule: "every day 15:00", timeZone: "America/New_York", timeoutSeconds: 300, secrets: PAYMENT_SECRETS }, async () => {
   const now = Date.now();
   const snap = await db.collection("orders").where("status", "==", "pending").orderBy("createdAt", "desc").limit(200).get();
   let sent = 0;
@@ -560,6 +854,12 @@ exports.abandonedCartReminder = onSchedule({ schedule: "every day 15:00", timeZo
     const o = d.data();
     const age = now - (o.createdAt?.toMillis ? o.createdAt.toMillis() : now);
     if (o.reminderSent || !o.email || age < 3600e3 || age > 3 * 864e5) continue;
+    if (o.paypalCaptureStatus === "PENDING" || o.stripePaymentStatus === "processing" || o.paymentReview) continue;
+    // Never nag someone who paid: ask the provider first (marks the order paid if it is). Skip on any doubt.
+    if (o.stripeSessionId || o.paypalOrderId) {
+      const check = await reconcileOrder({ id: d.id, ...o }, { captureApproved: false, source: "reminder" }).catch((e) => { console.error("reminder provider check failed", d.id, e.message); return { state: "error" }; });
+      if (!["unpaid", "expired", "not_found", "failed", "none"].includes(check.state)) continue;
+    }
     if (await marketing.isUnsubscribed(o.email)) { await d.ref.update({ reminderSent: true }); continue; }
     await sendMail({ to: o.email, subject: "Your Kind Flames bag is waiting", html: wrapEmail(`<h2>Still thinking it over?</h2><p>You left ${o.items.map((i) => esc(i.name)).join(", ")} in your bag. It's saved for you.</p><p><a href="${SITE_URL}/checkout">Finish checking out</a> — free shipping over $60.</p>`) }).catch(() => {});
     await d.ref.update({ reminderSent: true });

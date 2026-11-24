@@ -11,7 +11,8 @@ Kind Flames runs on two Firebase projects from the same codebase.
 | Functions config | `functions/.env` + `functions/.env.shamyra-web` | `functions/.env` + `functions/.env.kindflames-test` |
 | `IS_PRODUCTION` | `true` | `false` |
 | Stripe | live keys (account "Kind Flames") | sandbox **Shamyra-Web-Sandbox** keys (`sk_test_…`) |
-| PayPal | live (`PAYPAL_MODE=live`) | sandbox only, cannot go live |
+| PayPal | always live (follows `IS_PRODUCTION`) | always sandbox, cannot go live |
+| Checkout origins | site + `shamyra-web.web.app`/`.firebaseapp.com`, **no localhost** | site + hosting domains + localhost dev ports |
 | Google Analytics / Meta Pixel | on | off |
 | Search engines | indexed | `noindex,nofollow` on every page |
 | On-screen marker | none | "TEST ENVIRONMENT" chip, bottom right |
@@ -35,13 +36,88 @@ Nothing is shared between the two: separate Firestore, Auth users, Storage, Func
   `OWNER_EMAIL`, `FROM_EMAIL`, `REPLY_TO` (and `marketing.js` reads `RESEND_AUDIENCE_ID`) from `process.env`.
   The Firebase CLI loads `functions/.env` and then `functions/.env.<projectId>` on deploy and in the emulator.
   `ALLOWED_ORIGINS` = `SITE_URL` (with and without `www.`) + `<projectId>.web.app` + `<projectId>.firebaseapp.com`
-  + `EXTRA_ORIGINS` + the Vite localhost ports. `PRODUCTION_HOSTS` (the only origins allowed to use live PayPal)
-  is derived from `SITE_URL` when `IS_PRODUCTION=true` and is empty otherwise. `PAYPAL_MODE` (a secret) defaults
-  to `sandbox` unless `IS_PRODUCTION`. Code defaults equal the old hardcoded production values, so production
-  behaves exactly as before even if an env file were missing.
+  + `EXTRA_ORIGINS`, plus the Vite localhost ports **only when `IS_PRODUCTION=false`** (logic in
+  `functions/payments.js`, unit-tested). Code defaults equal the production values, so a missing env file still
+  means production.
+- **PayPal environment** (since 2026-11-24): `IS_PRODUCTION=true` → always **live**, otherwise always **sandbox**.
+  The browser's `origin` no longer plays any part (it used to: an order started from `http://localhost:5173` on
+  production went to PayPal sandbox and could be "paid" with a free sandbox buyer). Each PayPal order stores
+  `paypalEnv` ("live" | "sandbox") at creation; capture, refund, the reconciler and the webhook use that field, and
+  refuse an order whose `paypalEnv` doesn't match the project. Orders from before the field existed use the
+  project's environment. The `PAYPAL_MODE` secret is no longer read or bound (it can be left in Secret Manager or
+  deleted).
+- **Card payments gate**: on production `createStripeCheckout` / `createSubscriptionCheckout` refuse unless Admin →
+  Settings → "Card payments enabled" is on, whatever origin the browser sends (the `*.web.app` origin used to skip
+  the check). Test projects always allow cards.
+- **Capture checks**: a PayPal order is marked paid only when `purchase_units[0].payments.captures[0].status` is
+  `COMPLETED` **and** its amount/currency equal the order's `total`/USD (and `custom_id` is the order id). A `PENDING`
+  capture (eCheck, PayPal review) keeps the order `pending`, records `paypalCaptureStatus`/`paypalPendingReason` and
+  emails the owner once; a mismatch sets `paymentReview` and emails the owner, and is never marked paid. A capture
+  retry that PayPal answers with `ORDER_ALREADY_CAPTURED` reads the order and applies the same checks.
+  Stripe sessions with `payment_status` `paid` **or** `no_payment_required` (100% discount) count as paid.
 - **Secrets** never live in files: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `PAYPAL_CLIENT_ID`,
-  `PAYPAL_CLIENT_SECRET`, `PAYPAL_CLIENT_ID_LIVE`, `PAYPAL_CLIENT_SECRET_LIVE`, `PAYPAL_MODE`, `RESEND_API_KEY`
-  are Secret Manager secrets, set once per project.
+  `PAYPAL_CLIENT_SECRET`, `PAYPAL_CLIENT_ID_LIVE`, `PAYPAL_CLIENT_SECRET_LIVE`, `PAYPAL_WEBHOOK_ID`, `RESEND_API_KEY`
+  are Secret Manager secrets, set once per project. `STRIPE_WEBHOOK_SECRET` / `PAYPAL_WEBHOOK_ID` are only needed
+  once the matching feature flag is on (see "Payment webhooks and reconciliation").
+
+## Payment webhooks and reconciliation
+
+Three layers make sure a paid order ends up `paid` even when the customer's browser never comes back:
+
+1. **Browser return** (always on): `capturePayPalOrder` / `verifyStripePayment` when the customer lands back on the site.
+2. **Reconciler** (always on, both projects): `reconcilePendingPayments` runs every 30 minutes. For every `pending`
+   order older than 15 minutes (up to 7 days) that has a `stripeSessionId` or `paypalOrderId`, it asks Stripe/PayPal
+   and marks it paid through the same checks. A PayPal order the buyer approved but never captured (tab closed after
+   "Pay Now") is captured. `abandonedCartReminder` and admin "Delete unpaid order" (`deleteOrder`) also ask the
+   provider first: they never email or delete an order the provider reports paid (it gets marked paid instead), and
+   `deleteOrder` refuses if the provider can't be reached.
+3. **Webhooks** (behind feature flags, off by default on production): `stripeWebhook` and `paypalWebhook`.
+
+### Production: turning on the Stripe webhook (owner)
+
+1. Stripe dashboard (live mode, account "Kind Flames") → Developers → Webhooks → **Add endpoint**:
+   - URL: `https://us-central1-shamyra-web.cloudfunctions.net/stripeWebhook`
+   - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+     `checkout.session.async_payment_failed`, `charge.refunded`, `charge.dispute.created`
+2. Copy the endpoint's signing secret (`whsec_…`) and store it:
+   ```bash
+   firebase functions:secrets:set STRIPE_WEBHOOK_SECRET -P prod
+   ```
+3. Flip the flag in `functions/features.shamyra-web.json` to `"stripeWebhook": true` (it is committed as `false`;
+   the function is not even deployed while it's false, so the secret must exist first or the deploy fails).
+4. Commit, then `firebase deploy -P prod --only functions` (or `npm run deploy:prod` from `main`).
+5. Stripe → the endpoint → "Send test event" (`checkout.session.completed`): expect HTTP 200. A paid order with no
+   matching order id is logged and ignored.
+
+What it does: `checkout.session.completed` / `async_payment_succeeded` mark the order paid (session must belong to
+the order); `async_payment_failed` sets `paymentStatus: failed` and emails the owner; `charge.refunded` sets
+`refunded` / `partially_refunded` (refunds made in the Stripe dashboard show up in admin); `charge.dispute.created`
+stores `dispute` on the order and emails the owner. Subscription checkouts are ignored here (handled by
+`verifySubscription`). Handler errors return 500 so Stripe retries.
+
+### Turning on the PayPal webhook (owner, optional; test first)
+
+1. PayPal developer dashboard → Apps & Credentials → (Live tab for production, Sandbox tab for test) → the app whose
+   credentials are in `PAYPAL_CLIENT_ID_LIVE` (prod) / `PAYPAL_CLIENT_ID` (test) → **Add webhook**:
+   - URL: `https://us-central1-shamyra-web.cloudfunctions.net/paypalWebhook` (test:
+     `https://us-central1-kindflames-test.cloudfunctions.net/paypalWebhook`)
+   - Events: `Payment capture completed`, `Payment capture denied`, `Payment capture refunded` (optionally
+     `Payment capture pending`)
+2. Copy the **Webhook ID** PayPal shows and store it: `firebase functions:secrets:set PAYPAL_WEBHOOK_ID -P prod`
+   (or `-P test`).
+3. Set `"paypalWebhook": true` in `functions/features.<projectId>.json`, commit, deploy functions to that project.
+
+Every event is verified with PayPal's `verify-webhook-signature` API (using `PAYPAL_WEBHOOK_ID`) and then the order is
+re-read from the PayPal API; the event body itself is never trusted for amounts.
+
+### Auditing past PayPal orders
+
+`functions/scripts/audit-paypal-origins.mjs` is read-only. It lists paid PayPal orders whose origin was not a
+production host (the pre-fix exploit path). Check each printed capture id in the live PayPal account; if live PayPal
+has no such payment, the order was never really paid.
+```bash
+npx -y firebase-tools@15 emulators:exec --project prod --only functions "node functions/scripts/audit-paypal-origins.mjs"
+```
 
 ## Scripts
 
@@ -98,18 +174,16 @@ firebase functions:secrets:set PAYPAL_CLIENT_ID_LIVE -P test
 firebase functions:secrets:set PAYPAL_CLIENT_SECRET_LIVE -P test
 ```
 ```bash
-firebase functions:secrets:set PAYPAL_MODE -P test
-```
-(`sandbox`)
-```bash
 firebase functions:secrets:set RESEND_API_KEY -P test
 ```
 Resend: either reuse the production key (emails will really send, so `ADMIN_EMAILS`/`OWNER_EMAIL` are the only
 recipients that matter during tests) or create a second Resend API key for the test project.
 
 Stripe webhook (on for test via `functions/features.kindflames-test.json`; a `features.<projectId>.json` overrides `features.json` for that project only. Live on test since 2026-10-22): in the Stripe sandbox **Shamyra-Web-Sandbox** → Developers →
-Webhooks → Add endpoint `https://us-central1-kindflames-test.cloudfunctions.net/stripeWebhook`, event
-`checkout.session.completed`, then `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET -P test`.
+Webhooks → endpoint `https://us-central1-kindflames-test.cloudfunctions.net/stripeWebhook`. Since 2026-11-24 the
+handler also understands `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`,
+`charge.refunded` and `charge.dispute.created`: edit the existing endpoint and add those events (the signing secret
+doesn't change).
 
 Production secrets are untouched by any of this; they already exist in `shamyra-web`.
 
@@ -174,6 +248,5 @@ Copy `.env.example` to `.env` and fill in the **test** project's web config plus
 `/admin` without touching production data. `VITE_USE_EMULATOR=true` routes callables to a local functions
 emulator instead (`npx -y firebase-tools@15 emulators:start --project test --only functions`).
 
-Until the test project exists, `.env` can hold the production web config for `npm run dev` (that is what the
-hardcoded config used to do); with `VITE_ENV` unset the dev server still uses sandbox PayPal and shows the
-"LOCAL DEV" chip.
+Production functions no longer accept checkouts from `localhost` origins (since 2026-11-24), so `npm run dev`
+pointed at the production config can browse but cannot check out. Point `.env` at the test project to test payments.
