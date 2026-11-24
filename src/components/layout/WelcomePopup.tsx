@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { subscribeNewsletter, errorMessage } from '../../services/api';
 import { useCatalog } from '../../context/CatalogContext';
 import { useToast } from '../../context/ToastContext';
 import { track } from '../../lib/analytics';
@@ -53,11 +52,11 @@ export default function WelcomePopup() {
     const em = email.trim().toLowerCase(); if (!em) return;
     setBusy(true);
     try {
-      await setDoc(doc(db, 'newsletter', em), { email: em, source: 'popup', createdAt: serverTimestamp() });
+      await subscribeNewsletter({ email: em, source: 'popup' });
       track('sign_up', { method: 'newsletter' });
       set(SUB_KEY, '1'); set('kf_code', code); set(SEEN_KEY, String(Date.now()));
       setDone(true);
-    } catch { toast('Could not subscribe right now'); }
+    } catch (err) { toast(errorMessage(err, 'Could not subscribe right now')); }
     finally { setBusy(false); }
   };
   const copy = async () => { try { await navigator.clipboard.writeText(code); toast('Code copied'); } catch { /* ignore */ } };

@@ -15,11 +15,14 @@ export const createStripeCheckout = call<CheckoutInput, { orderId: string; order
 export const verifyStripePayment = call<{ sessionId: string; orderId: string }, { paid: boolean; order?: Order; status?: string }>('verifyStripePayment');
 export const createPayPalOrder = call<CheckoutInput, { orderId: string; orderNumber: string; paypalOrderId: string }>('createPayPalOrder');
 export const capturePayPalOrder = call<{ paypalOrderId: string; orderId: string }, { paid: boolean; order?: Order; status?: string }>('capturePayPalOrder');
-export const ensureAdmin = call<Record<string, never>, { admin: boolean; refreshed: boolean }>('ensureAdmin');
+export const ensureAdmin = call<Record<string, never>, { admin: boolean; refreshed: boolean; needsVerification?: boolean }>('ensureAdmin');
 export const updateOrderStatus = call<{ orderId: string; status: string; tracking?: { carrier: string; number: string }; internalNotes?: string }, { ok: boolean }>('updateOrderStatus');
-export const refundOrder = call<{ orderId: string }, { ok: boolean }>('refundOrder');
+export const refundOrder = call<{ orderId: string; amount?: number; reason?: string; restock?: boolean }, { ok: boolean; amount: number; refundedTotal: number; full: boolean; restocked: boolean; emailed: boolean }>('refundOrder');
 export const deleteOrder = call<{ orderId: string }, { ok: boolean }>('deleteOrder');
-export const submitQuote = call<Record<string, unknown>, { ok: boolean; id: string }>('submitQuote');
+export const submitQuote = call<Record<string, unknown>, { ok: boolean; id: string; mailed?: boolean }>('submitQuote');
+export type NewsletterSource = 'popup' | 'footer' | 'home' | 'checkout' | 'other';
+export const subscribeNewsletter = call<{ email: string; source: NewsletterSource }, { ok: boolean }>('subscribeNewsletter');
+export const requestBackInStock = call<{ productId: string; variantId: string; email: string }, { ok: boolean }>('requestBackInStock');
 export const createInvoice = call<{ quoteId: string; lines: { description: string; unitPrice: number; quantity: number }[]; daysUntilDue?: number; memo?: string }, { ok: boolean; url: string; total: number }>('createInvoice');
 
 export const listPlans = call<Record<string, never>, { plans: Plan[] }>('listPlans');

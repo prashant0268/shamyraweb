@@ -11,6 +11,7 @@ import { money } from '../lib/format';
 import { useSeo, useJsonLd } from '../lib/seo';
 import { productJsonLd } from '../lib/productJsonLd';
 import { track } from '../lib/analytics';
+import { requestBackInStock, errorMessage } from '../services/api';
 import { useWishlist } from '../lib/wishlist';
 import { FAMILY_IMAGES } from '../data/imagery';
 import ProductCard from '../components/ui/ProductCard';
@@ -50,6 +51,10 @@ export default function ProductDetail() {
   const [showForm, setShowForm] = useState(false);
   const [rv, setRv] = useState({ rating: 5, title: '', body: '', name: user?.displayName || '' });
   const [stickyOn, setStickyOn] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState('');
+  const [notifyBusy, setNotifyBusy] = useState(false);
+  const [notifiedKey, setNotifiedKey] = useState('');
   const ctaRef = useRef<HTMLDivElement>(null);
 
   useSeo({ title: product?.name, description: product ? `${product.tagline || ''} ${product.description}`.trim() : undefined, image: product?.images[0], path: `/product/${slug}` });
@@ -82,12 +87,20 @@ export default function ProductDetail() {
   const bestIdx = perOz.some((x) => x) ? perOz.indexOf(Math.min(...perOz.filter((x): x is number => x !== null))) : -1;
   const hasNotes = product.notes && product.notes.top !== '—';
   const addToBag = () => { add(product.id, variant.id, qty); toast(`${product.name} added to your bag`); };
+  const openNotify = () => { setNotifyEmail((cur) => cur || (user && !user.isAnonymous ? user.email || '' : '')); setNotifyOpen(true); ctaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+  const submitNotify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotifyBusy(true);
+    try { await requestBackInStock({ productId: product.id, variantId: variant.id, email: notifyEmail.trim() }); setNotifiedKey(`${product.id}_${variant.id}`); setNotifyOpen(false); toast(`We'll email you when ${variant.label} is back`); }
+    catch (err) { toast(errorMessage(err)); } finally { setNotifyBusy(false); }
+  };
+  const notified = notifiedKey === `${product.id}_${variant.id}`;
 
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || user.isAnonymous) { toast('Sign in to leave a review'); return; }
     try {
-      await addDoc(collection(db, 'reviews'), { productId: product.id, userId: user.uid, name: rv.name || 'Customer', rating: rv.rating, title: rv.title, body: rv.body, approved: false, createdAt: serverTimestamp() });
+      await addDoc(collection(db, 'reviews'), { productId: product.id, userId: user.uid, name: (rv.name.trim() || 'Customer').slice(0, 60), rating: Math.min(5, Math.max(1, Math.round(rv.rating))), title: rv.title.trim().slice(0, 120), body: rv.body.trim().slice(0, 2000), approved: false, createdAt: serverTimestamp() });
       toast('Thanks! Your review will appear once approved.'); setShowForm(false); setRv({ rating: 5, title: '', body: '', name: rv.name });
     } catch { toast('Could not submit review'); }
   };
@@ -115,7 +128,7 @@ export default function ProductDetail() {
             <div className="mb-2 flex items-baseline justify-between"><span className="label !mb-0">{product.category === 'set' ? 'Option' : 'Size'}</span><span className="text-sm text-muted">{variant.label}</span></div>
             <div className={`grid gap-2 ${product.variants.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
               {product.variants.map((v, k) => { const out = typeof v.stock === 'number' && v.stock <= 0; const sel = v.id === variantId; return (
-                <button key={v.id} type="button" disabled={out} onClick={() => setVariantId(v.id)} className={`relative rounded-card border p-3 text-left transition disabled:opacity-40 ${sel ? 'border-ink bg-surface ring-1 ring-ink' : 'border-line bg-surface hover:border-ink/50'}`}>
+                <button key={v.id} type="button" onClick={() => setVariantId(v.id)} className={`relative rounded-card border p-3 text-left transition ${out && !sel ? 'opacity-50' : ''} ${sel ? 'border-ink bg-surface ring-1 ring-ink' : 'border-line bg-surface hover:border-ink/50'}`}>
                   <span className="block font-semibold">{v.label}</span>
                   <span className="num block text-sm text-muted">{money(v.price)}{perOz[k] ? <span className="ml-1 text-xs">· {money(perOz[k]!)}/oz</span> : null}</span>
                   {out ? <span className="mt-1 block text-xs text-bad">Sold out</span> : k === bestIdx && product.variants.length > 1 ? <Badge tone="good" className="mt-1.5">Best value</Badge> : null}
@@ -126,9 +139,16 @@ export default function ProductDetail() {
 
           <div ref={ctaRef} className="flex flex-wrap items-center gap-3">
             <Qty value={qty} onChange={(n) => setQty(Math.max(1, Math.min(20, n)))} />
-            {soldOut ? <Button variant="ghost" size="lg" className="flex-1" onClick={() => toast("We'll restock soon")}>Sold out · notify me</Button> : <Button variant="accent" size="lg" className="flex-1" onClick={addToBag}>Add to bag · {money(variant.price * qty)}{variant.compareAt && <s className="ml-1 text-sm font-normal opacity-70">{money(variant.compareAt * qty)}</s>}</Button>}
+            {soldOut ? <Button variant="ghost" size="lg" className="flex-1" disabled={notified} onClick={openNotify}>{notified ? "Sold out · we'll email you" : 'Sold out · notify me'}</Button> : <Button variant="accent" size="lg" className="flex-1" onClick={addToBag}>Add to bag · {money(variant.price * qty)}{variant.compareAt && <s className="ml-1 text-sm font-normal opacity-70">{money(variant.compareAt * qty)}</s>}</Button>}
             <button type="button" aria-label={has(product.id) ? 'Remove from wishlist' : 'Save to wishlist'} aria-pressed={has(product.id)} onClick={() => { toggle(product.id); toast(has(product.id) ? 'Removed from wishlist' : 'Saved to wishlist'); }} className={`flex h-12 w-12 items-center justify-center rounded-btn border border-line ${has(product.id) ? 'text-bad' : 'text-muted hover:text-ink'}`}><Heart size={18} fill={has(product.id) ? 'currentColor' : 'none'} /></button>
           </div>
+          {soldOut && notifyOpen && !notified && (
+            <form onSubmit={submitNotify} className="card flex flex-wrap items-end gap-2 p-3">
+              <Field label={`Email me when ${variant.label} is back`} className="min-w-[220px] flex-1"><input type="email" required maxLength={200} className="input" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" /></Field>
+              <Button type="submit" disabled={notifyBusy}>{notifyBusy ? 'Saving…' : 'Notify me'}</Button>
+              <p className="w-full text-xs text-muted">One email when it restocks. Nothing else.</p>
+            </form>
+          )}
           <p className="text-sm text-muted">{low && <Badge tone="warn" className="mr-2">Only {variant.stock} left</Badge>}Ships in 1–2 business days · Free shipping over ${settings.freeShippingThreshold} · 30-day scent swap</p>
 
           {product.category === 'candle' && (
@@ -161,13 +181,13 @@ export default function ProductDetail() {
         {showForm && (
           <form onSubmit={submitReview} className="card mb-6 grid gap-3 p-4 sm:grid-cols-2">
             <Field label="Rating"><select className="input" value={rv.rating} onChange={(e) => setRv({ ...rv, rating: Number(e.target.value) })}>{[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{'★'.repeat(n)}</option>)}</select></Field>
-            <Field label="Your name"><input className="input" value={rv.name} onChange={(e) => setRv({ ...rv, name: e.target.value })} required /></Field>
-            <Field label="Title" className="sm:col-span-2"><input className="input" value={rv.title} onChange={(e) => setRv({ ...rv, title: e.target.value })} /></Field>
-            <Field label="Review" className="sm:col-span-2"><textarea className="input" rows={3} required value={rv.body} onChange={(e) => setRv({ ...rv, body: e.target.value })} /></Field>
+            <Field label="Your name"><input className="input" maxLength={60} value={rv.name} onChange={(e) => setRv({ ...rv, name: e.target.value })} required /></Field>
+            <Field label="Title" className="sm:col-span-2"><input className="input" maxLength={120} value={rv.title} onChange={(e) => setRv({ ...rv, title: e.target.value })} /></Field>
+            <Field label="Review" className="sm:col-span-2"><textarea className="input" rows={3} required maxLength={2000} value={rv.body} onChange={(e) => setRv({ ...rv, body: e.target.value })} /></Field>
             <div className="sm:col-span-2"><Button type="submit">Submit review</Button>{(!user || user.isAnonymous) && <span className="ml-3 text-sm text-muted">You'll need to <Link to="/login" className="underline">sign in</Link>.</span>}</div>
           </form>
         )}
-        <div className="divide-y divide-line">{reviews.map((r) => <div key={r.id} className="py-4"><Stars rating={r.rating} /><div className="font-bold">{r.title || r.name} <Badge tone="good" className="ml-1">Verified</Badge></div><p className="text-sm">{r.body}</p><div className="text-xs text-muted">— {r.name}</div></div>)}</div>
+        <div className="divide-y divide-line">{reviews.map((r) => <div key={r.id} className="py-4"><Stars rating={r.rating} /><div className="font-bold">{r.title || r.name}{r.verified === true && <Badge tone="good" className="ml-1">Verified buyer</Badge>}</div><p className="text-sm">{r.body}</p><div className="text-xs text-muted">— {r.name}</div></div>)}</div>
       </section>
 
       {more.length > 0 && (
@@ -178,7 +198,7 @@ export default function ProductDetail() {
       <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 backdrop-blur transition-transform ${stickyOn ? 'translate-y-0' : 'translate-y-full'}`} aria-hidden={!stickyOn}>
         <div className="wrap flex items-center gap-3 py-2.5">
           <div className="min-w-0 flex-1"><div className="truncate font-display font-semibold">{product.name}</div><div className="num text-xs text-muted">{variant.label} · {money(variant.price)}</div></div>
-          {soldOut ? <Button variant="ghost" onClick={() => toast("We'll restock soon")}>Sold out</Button> : <Button variant="accent" onClick={addToBag}>Add to bag</Button>}
+          {soldOut ? <Button variant="ghost" disabled={notified} onClick={openNotify}>{notified ? "We'll email you" : 'Notify me'}</Button> : <Button variant="accent" onClick={addToBag}>Add to bag</Button>}
         </div>
       </div>
     </div>

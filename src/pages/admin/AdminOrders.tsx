@@ -43,6 +43,10 @@ function OrderDetail({ id, onChange }: { id: string; onChange: () => void }) {
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmRefund, setConfirmRefund] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundRestock, setRefundRestock] = useState(true);
   const toast = useToast();
   const navigate = useNavigate();
   const load = () => getOrder(id).then((x) => { setO(x); setNotes(x?.internalNotes || ''); if (x?.tracking) setTracking({ carrier: x.tracking.carrier, number: x.tracking.number }); });
@@ -55,9 +59,20 @@ function OrderDetail({ id, onChange }: { id: string; onChange: () => void }) {
     setBusy(true);
     try { await updateOrderStatus({ orderId: o.id, status, tracking: status === 'shipped' ? tracking : undefined, internalNotes: notes }); toast(`Marked ${status}${status === 'shipped' ? ' · customer emailed' : ''}`); await load(); onChange(); } catch (e) { toast(errorMessage(e)); } finally { setBusy(false); }
   };
+  const refundable = Math.round((o.total - (o.refundedTotal || 0)) * 100) / 100;
+  const amt = refundAmount.trim() === '' ? refundable : Math.round(Number(refundAmount) * 100) / 100;
+  const amtValid = Number.isFinite(amt) && amt > 0 && amt <= refundable;
+  const isFull = amtValid && amt >= refundable;
   const refund = async () => {
+    if (!amtValid) { toast(`Enter an amount between $0.01 and ${money(refundable)}`); return; }
     if (!confirmRefund) { setConfirmRefund(true); return; }
-    setBusy(true); try { await refundOrder({ orderId: o.id }); toast('Refunded'); await load(); onChange(); } catch (e) { toast(errorMessage(e)); } finally { setBusy(false); setConfirmRefund(false); }
+    setBusy(true);
+    try {
+      const r = await refundOrder({ orderId: o.id, amount: amt, reason: refundReason.trim() || undefined, restock: isFull ? refundRestock : false });
+      toast(`Refunded ${money(r.amount)}${r.full ? ' (full)' : ''}${r.restocked ? ' · restocked' : ''}${r.emailed ? ' · customer emailed' : ''}`);
+      setRefundOpen(false); setRefundAmount(''); setRefundReason('');
+      await load(); onChange();
+    } catch (e) { toast(errorMessage(e)); } finally { setBusy(false); setConfirmRefund(false); }
   };
   const remove = async () => {
     if (!window.confirm(`Delete unpaid order ${o.number}? This cannot be undone.`)) return;
@@ -80,7 +95,18 @@ function OrderDetail({ id, onChange }: { id: string; onChange: () => void }) {
             {next === 'shipped' && <div className="grid grid-cols-[100px_1fr] gap-2"><select className="input" value={tracking.carrier} onChange={(e) => setTracking({ ...tracking, carrier: e.target.value })}><option>USPS</option><option>UPS</option><option>FedEx</option></select><input className="input" placeholder="Tracking number" value={tracking.number} onChange={(e) => setTracking({ ...tracking, number: e.target.value })} /></div>}
             {next && <Button block disabled={busy} onClick={() => act(next)}>Mark {next}</Button>}
             {o.tracking?.number && <a href={o.tracking.url} target="_blank" rel="noreferrer" className="block text-sm text-pine underline">Track {o.tracking.carrier} {o.tracking.number}</a>}
-            {o.paymentStatus === 'paid' && o.status !== 'refunded' && <Button block variant={confirmRefund ? 'danger' : 'ghost'} size="sm" disabled={busy} onClick={refund}>{confirmRefund ? `Confirm full refund of ${money(o.total)}` : 'Refund'}</Button>}
+            {o.paymentStatus === 'paid' && o.status !== 'refunded' && !refundOpen && <Button block variant="ghost" size="sm" disabled={busy} onClick={() => setRefundOpen(true)}>Refund…</Button>}
+            {o.paymentStatus === 'paid' && o.status !== 'refunded' && refundOpen && (
+              <div className="space-y-2 rounded-card border border-line p-3">
+                <Field label={`Amount (up to ${money(refundable)})`}><input className="input" type="number" step="0.01" min="0.01" max={refundable} placeholder={refundable.toFixed(2)} value={refundAmount} onChange={(e) => { setRefundAmount(e.target.value); setConfirmRefund(false); }} /></Field>
+                <Field label="Reason (shown to the customer)"><input className="input" maxLength={300} value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="e.g. Jar arrived cracked" /></Field>
+                {isFull && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={refundRestock} onChange={(e) => setRefundRestock(e.target.checked)} /> Put items back in stock</label>}
+                <div className="flex gap-2"><Button block variant={confirmRefund ? 'danger' : 'ghost'} size="sm" disabled={busy || !amtValid} onClick={refund}>{confirmRefund ? `Confirm ${isFull ? 'full' : 'partial'} refund of ${money(amtValid ? amt : 0)}` : `Refund ${money(amtValid ? amt : 0)}`}</Button><Button size="sm" variant="ghost" disabled={busy} onClick={() => { setRefundOpen(false); setConfirmRefund(false); }}>Close</Button></div>
+                <p className="text-xs text-muted">The customer gets an email with the amount and reason.</p>
+              </div>
+            )}
+            {(o.refunds?.length ?? 0) > 0 && <div className="text-xs text-muted"><div className="font-bold text-ink">Refunded {money(o.refundedTotal || 0)} of {money(o.total)}</div>{o.refunds!.map((r, k) => <div key={k}>{money(r.amount)} · {r.provider}{r.reason ? ` · ${r.reason}` : ''}</div>)}{o.restockedAt && <div>Items restocked</div>}</div>}
+            {o.oversold?.length ? <div className="rounded-card border border-bad/40 bg-bad/5 p-2 text-xs"><div className="font-bold text-bad">Oversold</div>{o.oversold.map((x, k) => <div key={k}>{x.name} ({x.variantId}): ordered {x.ordered}, had {x.available}</div>)}</div> : null}
             {o.status === 'pending' && <Button block variant="ghost" size="sm" disabled={busy} onClick={() => act('cancelled')}>Cancel unpaid order</Button>}
             {(o.status === 'pending' || o.status === 'cancelled') && o.paymentStatus !== 'paid' && <button className="block w-full text-center text-xs text-muted hover:text-red-700" disabled={busy} onClick={remove}>Delete unpaid order</button>}
           </div>

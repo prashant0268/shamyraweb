@@ -69,3 +69,8 @@ Where things live: `functions/marketing.js` (templates and timing; the `TIMING` 
 2. Admin → Newsletter → **Sync to Resend audience** once. This imports past subscribers and customers as contacts and creates the “Kind Flames customers” audience in Resend (id stored server-side). New signups and buyers are added automatically from now on. Use Resend → Broadcasts for one-off campaigns to that audience.
 3. Create `WELCOME10` in Admin → Discounts if you haven't; the welcome email checks for it and leaves the code out when missing.
 
+## Abuse protection + integrity fixes (added 2026-11-24)
+Review/newsletter/quote abuse, admin-claim hardening, discount reservations, transactional stock, partial refunds,
+low-stock email, back-in-stock emails and App Check (off by default). What changed, how to turn App Check on, and
+the deploy order (functions → hosting → rules): **docs/APP_CHECK.md**.
+

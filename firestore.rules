@@ -6,6 +6,9 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function isAdmin() { return signedIn() && request.auth.token.admin == true; }
     function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    // A real account (Google / email+password / …), not a checkout-only anonymous guest.
+    function isRealUser() { return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+    function optStr(d, k, max) { return !(k in d) || (d[k] is string && d[k].size() <= max); }
 
     // Public catalog; only admins write.
     match /products/{productId} {
@@ -34,25 +37,56 @@ service cloud.firestore {
     }
 
     // Orders are created and updated ONLY by Cloud Functions (Admin SDK).
-    // Customers can read their own; admins can read all and update fulfilment fields.
+    // Customers can read their own; admins can read all. Status changes go through the updateOrderStatus /
+    // refundOrder callables (they enforce "no cancelling a paid order", restock, emails), so a direct admin
+    // write may only touch notes and tracking.
     match /orders/{orderId} {
       allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
       allow create, delete: if false;
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys()
-           .hasOnly(['status', 'tracking', 'internalNotes', 'updatedAt']);
+           .hasOnly(['tracking', 'internalNotes', 'updatedAt']);
     }
 
-    // Reviews: anyone can read approved reviews; signed-in users create; admins moderate.
+    // Reviews: anyone can read; real (non-anonymous) accounts submit for moderation; admins moderate.
+    // `verified` and the product rating aggregate are computed server-side (onReviewWritten).
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isRealUser()
+        && request.resource.data.keys().hasOnly(['productId', 'userId', 'name', 'rating', 'title', 'body', 'approved', 'createdAt'])
+        && request.resource.data.keys().hasAll(['productId', 'userId', 'rating', 'body', 'approved', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.approved == false
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.productId is string
+        && request.resource.data.productId.size() > 0 && request.resource.data.productId.size() <= 100
+        && request.resource.data.body is string && request.resource.data.body.size() <= 2000
+        && optStr(request.resource.data, 'name', 60)
+        && optStr(request.resource.data, 'title', 120)
+        && request.resource.data.createdAt == request.time;
       allow update, delete: if isAdmin();
     }
 
+    // Newsletter signups are created only by the subscribeNewsletter callable (validation + throttling).
     match /newsletter/{email} {
-      allow create: if true;
+      allow create: if false;
       allow read, update, delete: if isAdmin();
+    }
+
+    // "Notify me" requests: written by the requestBackInStock callable; admins can see who's waiting.
+    match /backInStock/{key} {
+      allow read: if isAdmin();
+      allow write: if false;
+      match /requests/{requestId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
+    }
+
+    // Callable rate-limit counters. Server-only.
+    match /rateLimits/{doc} {
+      allow read, write: if false;
     }
 
     // Corporate quote requests: created via Cloud Function; admins manage.

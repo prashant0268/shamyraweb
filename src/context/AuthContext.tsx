@@ -21,7 +21,9 @@ async function toProfile(u: User): Promise<UserProfile> {
   try {
     const token = await u.getIdTokenResult();
     isAdmin = token.claims.admin === true;
-    if (!isAdmin && !u.isAnonymous && u.email) {
+    // Ask the server for every real account, admins included: it grants the claim to verified ADMIN_EMAILS and
+    // revokes it from anyone no longer listed, then we refresh the token to pick up either change.
+    if (!u.isAnonymous && u.email) {
       const r = await ensureAdmin({});
       if (r.refreshed) { await u.getIdToken(true); isAdmin = (await u.getIdTokenResult()).claims.admin === true; }
     }

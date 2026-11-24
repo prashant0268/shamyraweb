@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   taxRates: { NJ: 0.06625 },
   cardPaymentsEnabled: false,
   paypalEnabled: true,
+  lowStockThreshold: 5, // daily low-stock email lists variants below this many units
   announcement: { text: "Free US shipping on orders over $60", visible: true },
 };
 

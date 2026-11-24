@@ -32,6 +32,11 @@ export interface Order {
   shippingAddress: ShippingAddress; gift: GiftOptions; paymentMethod: 'stripe' | 'paypal'; paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'; status: OrderStatus;
   tracking?: { carrier: string; number: string; url: string } | null; internalNotes?: string;
   createdAt?: { seconds: number } | number | null; paidAt?: { seconds: number } | number | null;
+  /** Server-written refund ledger (refundOrder). */
+  refundedTotal?: number; refunds?: { amount: number; reason: string; provider: string; at?: { seconds: number } | null }[];
+  /** Set by markOrderPaid when a paid order wanted more units than were in stock. */
+  oversold?: { productId: string; variantId: string; name: string; ordered: number; available: number }[] | null;
+  restockedAt?: { seconds: number } | null;
 }
 
 export interface Pricing {
@@ -45,6 +50,8 @@ export interface StoreSettings {
   brandName: string; legalName: string; contactEmail: string; contactPhone: string;
   freeShippingThreshold: number; flatShipping: number; expressShipping: number; giftWrapFee: number; bundleDiscountPercent: number;
   taxRates: Record<string, number>; cardPaymentsEnabled: boolean; paypalEnabled: boolean;
+  /** Daily low-stock email lists variants below this many units (default 5). */
+  lowStockThreshold?: number;
   announcement: { text: string; visible: boolean; messages?: string[] };
   homepage?: { showChristmas?: boolean; showCorporate?: boolean; showNewsletter?: boolean };
   /** Storefront theme id (see src/themes.ts). */
@@ -57,7 +64,7 @@ export interface StoreSettings {
 }
 
 export interface Discount { code: string; type: 'percent' | 'fixed'; value: number; minSubtotal?: number; active: boolean; expiresAt?: { seconds: number } | null; usageLimit?: number | null; usageCount?: number; firstOrderOnly?: boolean; appliesTo?: 'all' | 'sets'; note?: string }
-export interface Review { id: string; productId: string; userId: string; name: string; rating: number; title?: string; body: string; approved: boolean; createdAt?: { seconds: number } | null }
+export interface Review { id: string; productId: string; userId: string; name: string; rating: number; title?: string; body: string; approved: boolean; verified?: boolean; createdAt?: { seconds: number } | null }
 export interface Quote { id: string; recipients?: Recipient[]; giftCode?: string; name: string; company: string; email: string; phone?: string; quantity: number; budget: string; neededBy: string; product: string; customization: string[]; shippingMode: string; notes: string; status: 'new' | 'quoted' | 'invoiced' | 'won' | 'lost'; invoiceUrl?: string; invoiceTotal?: number; createdAt?: { seconds: number } | null }
 
 export interface UserProfile { uid: string; email: string | null; displayName: string | null; isAnonymous: boolean; isAdmin: boolean; creationTime?: string }

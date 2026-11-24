@@ -18,7 +18,7 @@
     "deploy:test:hosting": "npm run build:test && firebase deploy -P test --only hosting",
     "seed:test": "npx -y firebase-tools@15 emulators:exec --project test --only functions \"node functions/scripts/seed-test-env.mjs\"",
     "seed:test:apply": "npx -y firebase-tools@15 emulators:exec --project test --only functions \"node functions/scripts/seed-test-env.mjs --apply\"",
-    "test": "node functions/scripts/test-pricing-unit.mjs && node functions/scripts/test-marketing-unit.mjs",
+    "test": "node functions/scripts/test-pricing-unit.mjs && node functions/scripts/test-integrity-unit.mjs && node functions/scripts/test-marketing-unit.mjs",
     "test:emulator": "npx -y firebase-tools@15 emulators:exec --project prod --only functions,firestore \"node functions/scripts/test-pricing.mjs\"",
     "smoke": "node scripts/smoke.mjs"
   },

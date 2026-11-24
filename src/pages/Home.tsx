@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, doc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useCatalog } from '../context/CatalogContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { useSeo } from '../lib/seo';
 import { track } from '../lib/analytics';
+import { subscribeNewsletter, errorMessage } from '../services/api';
 import { themeMeta } from '../themes';
 import { IMG, FAMILY_IMAGES, FAMILY_BLURBS } from '../data/imagery';
 import ProductCard from '../components/ui/ProductCard';
@@ -52,8 +53,8 @@ export default function Home() {
     e.preventDefault();
     const em = email.trim().toLowerCase();
     if (!em) return;
-    try { await setDoc(doc(db, 'newsletter', em), { email: em, source: 'home', createdAt: serverTimestamp() }); track('sign_up', { method: 'newsletter' }); try { localStorage.setItem('kf_subscribed', '1'); } catch { /* ignore */ } toast(`Welcome — use ${settings.popup?.code || 'WELCOME10'} at checkout`); setEmail(''); }
-    catch { toast('Could not subscribe right now'); }
+    try { await subscribeNewsletter({ email: em, source: 'home' }); track('sign_up', { method: 'newsletter' }); try { localStorage.setItem('kf_subscribed', '1'); } catch { /* ignore */ } toast(`Welcome — use ${settings.popup?.code || 'WELCOME10'} at checkout`); setEmail(''); }
+    catch (err) { toast(errorMessage(err, 'Could not subscribe right now')); }
   };
 
   return (
@@ -144,7 +145,7 @@ export default function Home() {
         <section className="border-y border-line bg-surface">
           <div className="wrap py-12 sm:py-16">
             <SectionHead center eyebrow="From customers" title="In their words" />
-            <div className="grid gap-4 md:grid-cols-3">{reviews.slice(0, 6).map((r) => <figure key={r.id} className="rounded-card border border-line bg-bg p-5"><Stars rating={r.rating} /><blockquote className="mt-2 font-display text-lg leading-snug">“{r.body}”</blockquote><figcaption className="mt-3 text-sm text-muted">{r.name} · verified buyer</figcaption></figure>)}</div>
+            <div className="grid gap-4 md:grid-cols-3">{reviews.slice(0, 6).map((r) => <figure key={r.id} className="rounded-card border border-line bg-bg p-5"><Stars rating={r.rating} /><blockquote className="mt-2 font-display text-lg leading-snug">“{r.body}”</blockquote><figcaption className="mt-3 text-sm text-muted">{r.name}{r.verified === true ? ' · verified buyer' : ''}</figcaption></figure>)}</div>
           </div>
         </section>
       )}
