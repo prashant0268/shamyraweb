@@ -87,3 +87,9 @@ Your steps, in order:
    - On the test project, add the four new events to the existing sandbox endpoint (same secret).
 3. **PayPal webhook** (optional; try on test first): PayPal app → Add webhook `https://us-central1-shamyra-web.cloudfunctions.net/paypalWebhook` with Payment capture completed / denied / refunded; `firebase functions:secrets:set PAYPAL_WEBHOOK_ID -P prod` with the Webhook ID; set `"paypalWebhook": true` in `functions/features.shamyra-web.json`; deploy functions.
 4. Optional cleanup: the `PAYPAL_MODE` secret is no longer bound and can be deleted (`firebase functions:secrets:destroy PAYPAL_MODE -P prod`, same for `-P test`).
+
+## Abuse protection + integrity fixes (added 2026-11-24)
+Review/newsletter/quote abuse, admin-claim hardening, discount reservations, transactional stock, partial refunds,
+low-stock email, back-in-stock emails and App Check (off by default). What changed, how to turn App Check on, and
+the deploy order (functions → hosting → rules): **docs/APP_CHECK.md**.
+

@@ -12,6 +12,7 @@
  * in scripts/test-marketing-unit.mjs.
  */
 const crypto = require("crypto");
+const { forEachPage } = require("./paging");
 
 const DAY = 864e5;
 const WELCOME_CODE = "WELCOME10";
@@ -262,20 +263,24 @@ function createMarketing({ db, FieldValue, sendMail, wrapEmail, esc, fmt, getPro
   async function runDrip(now = Date.now()) {
     const counts = { welcome2: 0, welcome3: 0, care: 0, reorder: 0, skipped: 0 };
     // Welcome series
-    const due = await db.collection("marketing").where("welcomeStage", "in", [1, 2]).limit(500).get();
-    for (const d of due.docs) {
-      const doc = { id: d.id, ...d.data() };
-      const step = welcomeStepDue(doc, now);
-      if (!step) continue;
-      const content = step === 2 ? await welcome2(doc) : await welcome3(doc);
-      const r = await sendMarketing(doc, content);
-      await d.ref.update({ welcomeStage: step, welcomeAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-      if (r.ok) counts[`welcome${step}`]++; else counts.skipped++;
-    }
-    // Orders: one scan of the last 60 days covers care + reorder
+    // Welcome series: page through every contact mid-series (no fixed cap).
+    await forEachPage(db.collection("marketing").where("welcomeStage", "in", [1, 2]), async (docs) => {
+      for (const d of docs) {
+        const doc = { id: d.id, ...d.data() };
+        const step = welcomeStepDue(doc, now);
+        if (!step) continue;
+        const content = step === 2 ? await welcome2(doc) : await welcome3(doc);
+        const r = await sendMarketing(doc, content);
+        await d.ref.update({ welcomeStage: step, welcomeAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+        if (r.ok) counts[`welcome${step}`]++; else counts.skipped++;
+      }
+    }, { orderById: true });
+    // Orders: one scan of the last 60 days covers care + reorder (paged on paidAt, so every order is seen).
     const since = new Date(now - TIMING.reorderMaxDays * DAY);
-    const recent = await db.collection("orders").where("paidAt", ">=", since).limit(1000).get();
-    const orders = recent.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const orders = [];
+    await forEachPage(db.collection("orders").where("paidAt", ">=", since).orderBy("paidAt"), (docs) => {
+      for (const d of docs) orders.push({ id: d.id, ...d.data() });
+    }, { pageSize: 500 });
     const emails = [...new Set(orders.map((o) => o.email).filter(Boolean))];
     const docs = new Map();
     for (let i = 0; i < emails.length; i += 100) {

@@ -1,5 +1,6 @@
 /**
- * Pure pricing logic (no Firestore). Injected: getProduct(id), getDiscount(code), hasPriorOrders(uid).
+ * Pure pricing logic (no Firestore). Injected: getProduct(id), getDiscount(code), hasPriorOrders({ uid, email }).
+ * hasPriorOrders must match paid orders by uid OR normalized email (guests get a fresh anonymous uid each visit).
  * Throws { code, message } errors that index.js maps to HttpsError.
  */
 class PricingError extends Error { constructor(code, message) { super(message); this.code = code; } }
@@ -7,6 +8,7 @@ const fail = (code, message) => { throw new PricingError(code, message); };
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const cents = (n) => Math.round(n * 100);
 const BODY_CATEGORIES = ["scrub", "lotion", "salt"];
+const { discountHasCapacity, normalizeEmail } = require("./integrity");
 
 /* -------------------------------- catalog -------------------------------- */
 
@@ -14,7 +16,7 @@ const BODY_CATEGORIES = ["scrub", "lotion", "salt"];
  * Validates cart items and prices them.
  * items: [{ productId, variantId, quantity, bundle? }]
  */
-async function priceCart({ items, discountCode, shippingAddress, shippingMethod, gift }, settings, uid, deps) {
+async function priceCart({ items, discountCode, shippingAddress, shippingMethod, gift, email }, settings, uid, deps) {
   const { getProduct, getDiscount, hasPriorOrders } = deps;
   if (!Array.isArray(items) || items.length === 0) fail("invalid-argument", "Your bag is empty.");
   if (items.length > 50) fail("invalid-argument", "Too many items.");
@@ -62,10 +64,11 @@ async function priceCart({ items, discountCode, shippingAddress, shippingMethod,
     const d = await getDiscount(code);
     const now = Date.now();
     const expired = d?.expiresAt && d.expiresAt.toMillis ? d.expiresAt.toMillis() < now : false;
-    const exhausted = d?.usageLimit ? (d.usageCount || 0) >= d.usageLimit : false;
+    const exhausted = d ? !discountHasCapacity(d) : false; // paid uses + open checkout reservations
     if (!d || d.active === false || expired || exhausted) fail("failed-precondition", "That discount code isn't valid.");
     if (d.minSubtotal && subtotal < d.minSubtotal) fail("failed-precondition", `Add ${fmt(d.minSubtotal - subtotal)} more to use ${code}.`);
-    if (d.firstOrderOnly && uid && (await hasPriorOrders(uid))) fail("failed-precondition", `${code} is for first orders only.`);
+    const emailNorm = normalizeEmail(email);
+    if (d.firstOrderOnly && (uid || emailNorm) && (await hasPriorOrders({ uid: uid || null, email: emailNorm || null }))) fail("failed-precondition", `${code} is for first orders only.`);
     const eligible = d.appliesTo === "sets" ? lines.filter((l) => l.category === "set") : lines;
     const base = round2(eligible.reduce((t, l) => t + l.unitPrice * l.quantity - l.lineDiscount, 0));
     const amount = d.type === "percent" ? round2(base * (Number(d.value) / 100)) : Math.min(base, round2(Number(d.value)));

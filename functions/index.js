@@ -19,6 +19,9 @@ const CATALOG = require("./catalog.json");
 const { priceCart: pricePure, round2, cents, fmt, PricingError } = require("./pricing");
 const { createMarketing } = require("./marketing");
 const { allowedOrigins, paypalEnvFor, paypalEnvForOrder, evaluatePayPalOrder, paypalIssue, stripeSessionState } = require("./payments");
+const integrity = require("./integrity");
+const { cleanEmail, normalizeEmail, sha, rateWindow, clientIp, oneLine, discountHasCapacity, planStockDecrement, planRestock, variantsBackInStock, lowStockVariants, planRefund, clampRating, ordersContainProduct, PAID_STATUSES } = integrity;
+const { forEachPage } = require("./paging");
 
 initializeApp();
 const db = getFirestore();
@@ -46,6 +49,12 @@ const FEATURES = (() => { const base = require("./features.json"); try { return 
 const ENABLE_RESEND = FEATURES.resend === true;
 const ENABLE_STRIPE_WEBHOOK = FEATURES.stripeWebhook === true;
 const ENABLE_PAYPAL_WEBHOOK = FEATURES.paypalWebhook === true;
+// App Check on public callables. Off until the site key is registered and VITE_APPCHECK_SITE_KEY ships in the web
+// build (docs/APP_CHECK.md); turning it on first would reject every browser call.
+const ENFORCE_APP_CHECK = FEATURES.appCheck === true;
+/** Options for callables anyone (including anonymous guests) can hit. */
+const PUBLIC_CALL = { cors: true, enforceAppCheck: ENFORCE_APP_CHECK };
+const HOUR = 3600e3;
 const MAIL_SECRETS = ENABLE_RESEND ? ["RESEND_API_KEY"] : [];
 const STRIPE_SECRETS = ["STRIPE_SECRET_KEY", ...MAIL_SECRETS];
 // PAYPAL_MODE is no longer read (the environment follows IS_PRODUCTION) and no longer bound; the secret can stay.
@@ -69,7 +78,14 @@ async function getProduct(id) {
 const pricingDeps = {
   getProduct,
   getDiscount: async (code) => { const snap = await db.doc(`discounts/${code}`).get(); return snap.exists ? snap.data() : null; },
-  hasPriorOrders: async (uid) => !(await db.collection("orders").where("userId", "==", uid).where("status", "in", ["paid", "fulfilled", "shipped", "delivered"]).limit(1).get()).empty,
+  /** Paid orders by this uid, or by this normalized email (new orders store emailNormalized; older ones only email). */
+  hasPriorOrders: async ({ uid, email }) => {
+    const paid = (q) => q.where("status", "in", PAID_STATUSES).limit(1).get().then((s) => !s.empty);
+    const checks = [];
+    if (uid) checks.push(paid(db.collection("orders").where("userId", "==", uid)));
+    if (email) checks.push(paid(db.collection("orders").where("emailNormalized", "==", email)), paid(db.collection("orders").where("email", "==", email)));
+    return (await Promise.all(checks)).some(Boolean);
+  },
 };
 async function priceCart(input, settings, uid) {
   try { return await pricePure(input, settings, uid, pricingDeps); }
@@ -100,10 +116,14 @@ async function nextOrderNumber() {
 }
 
 async function createPendingOrder({ uid, email, pricing, shippingAddress, gift, paymentMethod, origin, extra = {} }) {
+  const code = pricing.discount?.code || null;
+  // A new checkout supersedes this customer's earlier unpaid ones: free their code reservations first, so a
+  // retry doesn't count against a usage-limited code twice.
+  if (code) await releaseUserReservations(uid).catch((e) => console.error("release stale reservations failed", e.message));
   const number = await nextOrderNumber();
   const ref = db.collection("orders").doc();
   const order = {
-    number, userId: uid, email: String(email || "").toLowerCase().slice(0, 200), customerName: shippingAddress.fullName,
+    number, userId: uid, email: String(email || "").toLowerCase().slice(0, 200), emailNormalized: normalizeEmail(email), customerName: shippingAddress.fullName,
     items: pricing.lines.map((l) => ({ productId: l.productId, variantId: l.variantId, name: l.name, variantLabel: l.variantLabel, price: l.unitPrice, quantity: l.quantity, image: l.image, lineDiscount: l.lineDiscount, bundle: l.bundle })),
     subtotal: pricing.subtotal, bundleDiscount: pricing.bundleDiscount, discount: pricing.discount, discountTotal: pricing.discountTotal, giftWrap: pricing.giftWrap,
     shipping: pricing.shipping, tax: pricing.tax, taxRate: pricing.taxRate, total: pricing.total, currency: "usd",
@@ -111,9 +131,99 @@ async function createPendingOrder({ uid, email, pricing, shippingAddress, gift, 
     paymentMethod, paymentStatus: "pending", status: "pending", origin: origin || "",
     tracking: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), paidAt: null,
     ...extra,
+    discountReservation: code ? { code, state: "reserved" } : null,
   };
-  await ref.set(order);
+  if (!code) { await ref.set(order); return { id: ref.id, ...order }; }
+  // Reserve one use of the code atomically with the order, so concurrent checkouts can't exceed usageLimit.
+  // markOrderPaid turns the reservation into a use; releaseReservation / releaseExpiredReservations give it back.
+  const dref = db.doc(`discounts/${code}`);
+  await db.runTransaction(async (tx) => {
+    const ds = await tx.get(dref);
+    const d = ds.exists ? ds.data() : null;
+    if (!d || d.active === false || !discountHasCapacity(d)) throw new HttpsError("failed-precondition", `${code} has reached its usage limit. Remove it to continue.`);
+    tx.update(dref, { reservedCount: FieldValue.increment(1) });
+    tx.set(ref, order);
+  });
   return { id: ref.id, ...order };
+}
+
+/** Gives back an unpaid order's discount reservation (idempotent). */
+async function releaseReservation(orderId) {
+  const ref = db.doc(`orders/${orderId}`);
+  return db.runTransaction(async (tx) => {
+    const s = await tx.get(ref);
+    const o = s.exists ? s.data() : null;
+    if (!o || o.discountReservation?.state !== "reserved" || o.paymentStatus === "paid") return false;
+    const dref = db.doc(`discounts/${o.discountReservation.code}`);
+    const ds = await tx.get(dref);
+    if (ds.exists) tx.update(dref, { reservedCount: FieldValue.increment(-1) });
+    tx.update(ref, { "discountReservation.state": "released", "discountReservation.releasedAt": FieldValue.serverTimestamp() });
+    return true;
+  });
+}
+async function releaseUserReservations(uid) {
+  if (!uid) return;
+  const snap = await db.collection("orders").where("userId", "==", uid).where("discountReservation.state", "==", "reserved").limit(20).get();
+  for (const d of snap.docs) if (d.data().paymentStatus !== "paid") await releaseReservation(d.id);
+}
+
+/**
+ * Inside markOrderPaid's transaction: re-check stock and decrement it, and turn the discount reservation into a
+ * use. Does all its reads before any write (Firestore transaction rule). Returns the patch for the order doc.
+ */
+async function applyPaidInventory(tx, order) {
+  const ids = [...new Set((order.items || []).map((i) => String(i.productId)))];
+  const psnaps = ids.length ? await tx.getAll(...ids.map((id) => db.doc(`products/${id}`))) : [];
+  const code = order.discount?.code || null;
+  const dref = code ? db.doc(`discounts/${code}`) : null;
+  const dsnap = dref ? await tx.get(dref) : null;
+  const products = {};
+  for (const ps of psnaps) if (ps.exists) products[ps.id] = ps.data();
+  const plan = planStockDecrement(products, order.items);
+  const touched = new Set(plan.decremented.map((d) => d.productId));
+  for (const pid of touched) tx.update(db.doc(`products/${pid}`), { variants: plan.variantsByProduct[pid], updatedAt: FieldValue.serverTimestamp() });
+  if (dsnap?.exists) {
+    const reserved = order.discountReservation?.state === "reserved";
+    tx.update(dref, { usageCount: FieldValue.increment(1), ...(reserved ? { reservedCount: FieldValue.increment(-1) } : {}) });
+  }
+  const patch = { stockDecremented: plan.decremented, oversold: plan.oversold.length ? plan.oversold : null };
+  if (order.discountReservation) patch.discountReservation = { ...order.discountReservation, state: "redeemed" };
+  return { patch, oversold: plan.oversold };
+}
+
+/** Puts back the stock a paid order took (idempotent via restockedAt). */
+async function restockOrder(orderId) {
+  const ref = db.doc(`orders/${orderId}`);
+  return db.runTransaction(async (tx) => {
+    const s = await tx.get(ref);
+    const o = s.exists ? s.data() : null;
+    if (!o || o.restockedAt) return false;
+    // Orders paid before stockDecremented existed: fall back to the line items (subscription boxes never took stock).
+    const taken = Array.isArray(o.stockDecremented) ? o.stockDecremented
+      : o.paidAt && o.paymentMethod !== "subscription" ? (o.items || []).map((i) => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })) : [];
+    if (!taken.length) return false;
+    const ids = [...new Set(taken.map((t) => String(t.productId)))];
+    const psnaps = await tx.getAll(...ids.map((id) => db.doc(`products/${id}`)));
+    const products = {};
+    for (const ps of psnaps) if (ps.exists) products[ps.id] = ps.data();
+    const out = planRestock(products, taken);
+    for (const [pid, variants] of Object.entries(out)) tx.update(db.doc(`products/${pid}`), { variants, updatedAt: FieldValue.serverTimestamp() });
+    tx.update(ref, { restockedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
+}
+
+/** Fixed-window rate limit backed by rateLimits/{kind_hash}. Throws resource-exhausted when over. */
+async function throttle(kind, key, limit, windowMs) {
+  const ref = db.doc(`rateLimits/${kind}_${sha(key).slice(0, 32)}`);
+  const allowed = await db.runTransaction(async (tx) => {
+    const s = await tx.get(ref);
+    const r = rateWindow(s.exists ? s.data() : null, Date.now(), limit, windowMs);
+    // expireAt lets a Firestore TTL policy on rateLimits.expireAt clean these up (docs/APP_CHECK.md).
+    tx.set(ref, { ...r.state, kind, expireAt: new Date(r.state.windowStart + windowMs) });
+    return r.allowed;
+  });
+  if (!allowed) throw new HttpsError("resource-exhausted", "Too many requests. Please try again in a little while.");
 }
 
 /** Idempotently marks an order paid, decrements stock, counts discount usage, sends emails.
@@ -125,26 +235,13 @@ async function markOrderPaid(orderId, payment, extra = {}) {
     if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
     const order = snap.data();
     if (order.paymentStatus === "paid") return { already: true, order: { id: snap.id, ...order } };
-    tx.update(ref, { ...extra, paymentStatus: "paid", status: "paid", paidAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), payment: payment || {} });
-    return { already: false, order: { id: snap.id, ...order, paymentStatus: "paid", status: "paid" } };
+    const inventory = await applyPaidInventory(tx, order); // stock re-check/decrement + discount use, same transaction
+    tx.update(ref, { ...extra, paymentStatus: "paid", status: "paid", paidAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), payment: payment || {}, ...inventory.patch });
+    return { already: false, oversold: inventory.oversold, order: { id: snap.id, ...order, ...inventory.patch, paymentStatus: "paid", status: "paid" } };
   });
   if (result.already) return result.order;
 
-  // Stock + discount usage (best effort, outside the transaction).
-  for (const item of result.order.items) {
-    const pref = db.doc(`products/${item.productId}`);
-    try {
-      await db.runTransaction(async (tx) => {
-        const ps = await tx.get(pref);
-        if (!ps.exists) return;
-        const variants = (ps.data().variants || []).map((v) => v.id === item.variantId && typeof v.stock === "number" ? { ...v, stock: Math.max(0, v.stock - item.quantity) } : v);
-        tx.update(pref, { variants, updatedAt: FieldValue.serverTimestamp() });
-      });
-    } catch (e) { console.error("stock update failed", item.productId, e.message); }
-  }
-  if (result.order.discount?.code) {
-    await db.doc(`discounts/${result.order.discount.code}`).set({ usageCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
-  }
+  if (result.oversold?.length) await sendOwnerOversold(result.order, result.oversold).catch((e) => console.error("oversold email failed", e.message));
   await Promise.all([sendOrderConfirmation(result.order), sendOwnerNewOrder(result.order)]).catch((e) => console.error("email failed", e.message));
   await marketing.onOrderPaid(result.order).catch((e) => console.error("marketing contact failed", e.message));
   return result.order;
@@ -160,7 +257,7 @@ function requireAuth(request) { if (!request.auth) throw new HttpsError("unauthe
 function requireAdmin(request) { if (!request.auth?.token?.admin) throw new HttpsError("permission-denied", "Admins only."); return request.auth.uid; }
 
 /* ------------------------------- quoting --------------------------------- */
-exports.quoteCart = onCall({ cors: true }, async (request) => {
+exports.quoteCart = onCall(PUBLIC_CALL, async (request) => {
   const settings = await getSettings();
   const pricing = await priceCart(request.data || {}, settings, request.auth?.uid);
   return { ...pricing, settings: { freeShippingThreshold: settings.freeShippingThreshold, flatShipping: settings.flatShipping, expressShipping: settings.expressShipping, giftWrapFee: settings.giftWrapFee } };
@@ -581,16 +678,39 @@ exports.reconcilePendingPayments = onSchedule({ schedule: "every 30 minutes", ti
 });
 
 /* --------------------------------- admin --------------------------------- */
+/**
+ * Grants or revokes the admin claim from ADMIN_EMAILS. The email only counts when Firebase has verified it and the
+ * sign-in was Google or email/password (not anonymous, phone, or a custom token carrying an unverified email).
+ */
 exports.ensureAdmin = onCall({ cors: true }, async (request) => {
   const uid = requireAuth(request);
-  const email = (request.auth.token.email || "").toLowerCase();
-  const should = !!email && ADMIN_EMAILS.includes(email);
-  const has = request.auth.token.admin === true;
+  const token = request.auth.token;
+  const email = (token.email || "").toLowerCase();
+  const provider = token.firebase?.sign_in_provider || "";
+  const trusted = token.email_verified === true && (provider === "google.com" || provider === "password");
+  const listed = !!email && ADMIN_EMAILS.includes(email);
+  const should = trusted && listed;
+  const has = token.admin === true;
+  const auth = getAuth();
   if (should && !has) {
-    await getAuth().setCustomUserClaims(uid, { admin: true });
+    const user = await auth.getUser(uid);
+    await auth.setCustomUserClaims(uid, { ...(user.customClaims || {}), admin: true });
     await db.doc(`users/${uid}`).set({ role: "admin", email, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   }
-  return { admin: should || has, refreshed: should && !has };
+  // Revoke when the address is no longer listed (or no longer verified). Skip when ADMIN_EMAILS is empty: that is a
+  // missing .env, and wiping every admin because of it would lock the owner out.
+  let revoked = false;
+  if (!should && has && ADMIN_EMAILS.length) {
+    const user = await auth.getUser(uid);
+    const { admin: _drop, ...rest } = user.customClaims || {};
+    await auth.setCustomUserClaims(uid, rest);
+    await auth.revokeRefreshTokens(uid); // old ID tokens still carry admin until they expire (<1h); stop refreshes now
+    await db.doc(`users/${uid}`).set({ role: "customer", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    console.warn("admin claim revoked", uid, listed ? "email not verified / untrusted provider" : "email not in ADMIN_EMAILS");
+    revoked = true;
+  }
+  if (listed && !trusted && !has) console.warn("admin email signed in without verification", uid, provider);
+  return { admin: should || (has && !revoked), refreshed: (should && !has) || revoked, needsVerification: listed && !trusted };
 });
 
 exports.updateOrderStatus = onCall({ cors: true, secrets: MAIL_SECRETS }, async (request) => {
@@ -601,47 +721,137 @@ exports.updateOrderStatus = onCall({ cors: true, secrets: MAIL_SECRETS }, async 
   const ref = db.doc(`orders/${orderId}`);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
+  const cur = snap.data();
+  // Money moved: the status has to match it. "refunded" only comes from refundOrder, and a paid order can only be
+  // cancelled once the money is back.
+  if (status === "refunded" && cur.paymentStatus !== "refunded") throw new HttpsError("failed-precondition", "Use Refund to refund an order; it returns the money and sets the status.");
+  if (status === "cancelled" && cur.paymentStatus === "paid") throw new HttpsError("failed-precondition", "This order is paid. Refund it in full before cancelling.");
   const update = { status, updatedAt: FieldValue.serverTimestamp() };
   if (status === "shipped" && !snap.data().shippedAt) update.shippedAt = FieldValue.serverTimestamp();
   if (tracking) update.tracking = { carrier: String(tracking.carrier || "").slice(0, 40), number: String(tracking.number || "").slice(0, 60), url: trackingUrl(tracking) };
   if (typeof internalNotes === "string") update.internalNotes = internalNotes.slice(0, 2000);
   await ref.update(update);
-  const order = { id: snap.id, ...snap.data(), ...update };
+  if (status === "cancelled") {
+    await releaseReservation(orderId).catch((e) => console.error("release reservation failed", orderId, e.message));
+    if (cur.paymentStatus === "refunded") await restockOrder(orderId).catch((e) => console.error("restock failed", orderId, e.message));
+  }
+  const order = { id: snap.id, ...cur, ...update };
   if (status === "shipped") await sendShipped(order).catch((e) => console.error(e.message));
   if (status === "delivered") await sendReviewRequest(order).catch((e) => console.error(e.message));
   return { ok: true };
 });
 
+/**
+ * Full or partial refund. data: { orderId, amount? (dollars; default = everything not yet refunded), reason?, restock? }
+ * restock defaults to true for the final (full) refund and false for partial ones. Emails the customer.
+ */
 exports.refundOrder = onCall({ cors: true, secrets: PAYMENT_SECRETS }, async (request) => {
   requireAdmin(request);
-  const { orderId } = request.data || {};
+  const { orderId, amount, reason, restock } = request.data || {};
+  if (!orderId || typeof orderId !== "string") throw new HttpsError("invalid-argument", "orderId required.");
+  const note = oneLine(reason, 300);
   const ref = db.doc(`orders/${orderId}`);
-  const snap = await ref.get();
-  if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
-  const order = snap.data();
-  if (order.paymentStatus !== "paid") throw new HttpsError("failed-precondition", "Order is not paid.");
-  if (order.payment?.provider === "stripe" && order.payment.paymentIntentId) {
-    await getStripe().refunds.create({ payment_intent: order.payment.paymentIntentId });
-  } else if (order.payment?.provider === "paypal" && order.payment.captureId) {
-    await new PaymentsController(getPayPalClient(orderPayPalEnv(order))).refundCapturedPayment({ captureId: order.payment.captureId, prefer: "return=minimal" });
-  } else {
-    throw new HttpsError("failed-precondition", "No refundable payment on this order.");
+  // Claim the amount first so two clicks (or two admins) can't refund the same money twice.
+  const claim = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError("not-found", "Order not found.");
+    const order = snap.data();
+    if (order.paymentStatus !== "paid") throw new HttpsError("failed-precondition", "Order is not paid.");
+    if (order.refundInFlight) throw new HttpsError("aborted", "A refund on this order is already in progress.");
+    const plan = planRefund(order, amount);
+    if (plan.error) throw new HttpsError("invalid-argument", plan.error);
+    tx.update(ref, { refundInFlight: { amount: plan.amount, at: FieldValue.serverTimestamp() } });
+    return { order: { id: snap.id, ...order }, plan };
+  });
+  const { order, plan } = claim;
+  let providerRefundId = null;
+  try {
+    if (order.payment?.provider === "stripe" && order.payment.paymentIntentId) {
+      const r = await getStripe().refunds.create({ payment_intent: order.payment.paymentIntentId, amount: cents(plan.amount), reason: "requested_by_customer", metadata: { orderId, orderNumber: order.number || "", note } });
+      providerRefundId = r.id;
+    } else if (order.payment?.provider === "paypal" && order.payment.captureId) {
+      const { result } = await new PaymentsController(getPayPalClient(orderPayPalEnv(order))).refundCapturedPayment({
+        captureId: order.payment.captureId, prefer: "return=representation",
+        body: { amount: { currencyCode: "USD", value: plan.amount.toFixed(2) }, invoiceId: `${order.number || orderId}-R${(order.refunds || []).length + 1}`, noteToPayer: note || undefined },
+      });
+      providerRefundId = result?.id || null;
+    } else {
+      throw new HttpsError("failed-precondition", "No refundable payment on this order.");
+    }
+  } catch (e) {
+    await ref.update({ refundInFlight: FieldValue.delete() }).catch(() => {});
+    if (e instanceof HttpsError) throw e;
+    console.error("refund failed", orderId, e.message);
+    throw new HttpsError("internal", "The payment provider rejected the refund. Check the PayPal/Stripe dashboard, then try again.");
   }
-  await ref.update({ status: "refunded", paymentStatus: "refunded", updatedAt: FieldValue.serverTimestamp() });
-  return { ok: true };
+  const refundedTotal = round2((Number(order.refundedTotal) || 0) + plan.amount);
+  const entry = { amount: plan.amount, reason: note, provider: order.payment.provider, providerRefundId, at: new Date(), by: request.auth.uid };
+  const update = { refundInFlight: FieldValue.delete(), refundedTotal, refunds: FieldValue.arrayUnion(entry), updatedAt: FieldValue.serverTimestamp() };
+  if (plan.full) Object.assign(update, { status: "refunded", paymentStatus: "refunded", refundedAt: FieldValue.serverTimestamp() });
+  await ref.update(update);
+  const doRestock = typeof restock === "boolean" ? restock : plan.full;
+  let restocked = false;
+  if (doRestock) restocked = await restockOrder(orderId).catch((e) => { console.error("restock failed", orderId, e.message); return false; });
+  if (plan.full) await releaseReservation(orderId).catch(() => {});
+  const mail = await sendRefundEmail({ ...order, refundedTotal }, plan.amount, note, plan.full).catch((e) => { console.error("refund email failed", e.message); return { ok: false }; });
+  return { ok: true, amount: plan.amount, refundedTotal, full: plan.full, restocked, emailed: !!mail?.ok };
 });
 
 /* ---------------------------- reviews aggregate --------------------------- */
+/**
+ * Keeps product rating/reviewCount in sync (paging through every approved review) and stamps each review with a
+ * server-computed `verified` flag (the reviewer has a paid order containing that product) and a clamped rating.
+ * Its own write-back re-triggers this function once; that run finds nothing to change and stops.
+ */
 exports.onReviewWritten = onDocumentWritten("reviews/{reviewId}", async (event) => {
-  const after = event.data?.after?.data();
-  const before = event.data?.before?.data();
-  const productId = after?.productId || before?.productId;
-  if (!productId) return;
-  const snap = await db.collection("reviews").where("productId", "==", productId).where("approved", "==", true).get();
-  const ratings = snap.docs.map((d) => Number(d.data().rating) || 0).filter((r) => r > 0);
-  const rating = ratings.length ? round2(ratings.reduce((a, b) => a + b, 0) / ratings.length) : null;
-  await db.doc(`products/${productId}`).set({ rating, reviewCount: ratings.length }, { merge: true }).catch(() => {});
+  const after = event.data?.after?.exists ? event.data.after.data() : null;
+  const before = event.data?.before?.exists ? event.data.before.data() : null;
+
+  if (after) {
+    const patch = {};
+    const r = clampRating(after.rating);
+    if (r !== null && r !== after.rating) patch.rating = r;
+    if (r === null) { patch.rating = 1; patch.approved = false; }
+    const identityChanged = !before || before.userId !== after.userId || before.productId !== after.productId;
+    if (identityChanged || typeof after.verified !== "boolean") {
+      const verified = await reviewerBoughtProduct(after.userId, after.productId).catch((e) => { console.error("verify review failed", e.message); return false; });
+      if (verified !== after.verified) patch.verified = verified;
+    }
+    // Written before the aggregate below reads it back. The re-trigger this causes sees no rating/approval change
+    // and stops without doing anything.
+    if (Object.keys(patch).length) await event.data.after.ref.update(patch);
+  }
+
+  const productIds = [...new Set([after?.productId, before?.productId].filter(Boolean))];
+  const aggregateChanged = !before || !after || before.approved !== after.approved || before.rating !== after.rating || before.productId !== after.productId;
+  if (!aggregateChanged) return;
+  for (const productId of productIds) {
+    let sum = 0, count = 0;
+    await forEachPage(db.collection("reviews").where("productId", "==", productId).where("approved", "==", true).select("rating"), (docs) => {
+      for (const d of docs) { const r = clampRating(d.data().rating); if (r) { sum += r; count++; } }
+    }, { pageSize: 500, orderById: true });
+    const rating = count ? round2(sum / count) : null;
+    await db.doc(`products/${productId}`).set({ rating, reviewCount: count }, { merge: true }).catch(() => {});
+  }
 });
+
+/** Paid order containing productId, by the reviewer's uid or (for guests who later made an account) verified email. */
+async function reviewerBoughtProduct(uid, productId) {
+  if (!uid || !productId) return false;
+  const check = async (q) => {
+    let found = false;
+    await forEachPage(q.select("status", "items"), (docs) => { // single equality filter: no composite index needed
+      found = ordersContainProduct(docs.map((d) => d.data()), productId);
+      return !found;
+    }, { pageSize: 100, orderById: true });
+    return found;
+  };
+  if (await check(db.collection("orders").where("userId", "==", uid))) return true;
+  const user = await getAuth().getUser(uid).catch(() => null);
+  const email = user?.emailVerified ? normalizeEmail(user.email) : "";
+  if (!email) return false;
+  return (await check(db.collection("orders").where("emailNormalized", "==", email))) || check(db.collection("orders").where("email", "==", String(user.email).toLowerCase()));
+}
 
 /* ------------------------------- corporate -------------------------------- */
 // Admin-only: remove an order that was never paid (abandoned checkout, test order). Paid orders must be refunded, not deleted.
@@ -668,28 +878,125 @@ exports.deleteOrder = onCall({ cors: true, secrets: PAYMENT_SECRETS }, async (re
     if (check.state === "paid") throw new HttpsError("failed-precondition", "The payment provider reports this order as paid, so it is now marked paid. Refund it instead of deleting it.");
     if (MONEY_STATES.includes(check.state)) throw new HttpsError("failed-precondition", `The payment provider reports a payment on this order (${check.state}), so it can't be deleted.`);
   }
+  await releaseReservation(orderId).catch((e) => console.error("release reservation failed", orderId, e.message));
   await ref.delete();
   return { ok: true };
 });
 
-exports.submitQuote = onCall({ cors: true, secrets: MAIL_SECRETS }, async (request) => {
+exports.submitQuote = onCall({ ...PUBLIC_CALL, secrets: MAIL_SECRETS }, async (request) => {
   const d = request.data || {};
   const s = (v, n = 200) => String(v || "").trim().slice(0, n);
+  const email = cleanEmail(d.email);
   const quote = {
-    name: s(d.name), company: s(d.company), email: s(d.email).toLowerCase(), phone: s(d.phone, 40), quantity: Math.max(1, parseInt(d.quantity, 10) || 25),
+    name: s(d.name), company: s(d.company), email, phone: s(d.phone, 40), quantity: Math.min(100000, Math.max(1, parseInt(d.quantity, 10) || 25)),
     budget: s(d.budget, 40), neededBy: s(d.neededBy, 40), product: s(d.product), customization: Array.isArray(d.customization) ? d.customization.map((c) => s(c, 40)).slice(0, 10) : [],
     shippingMode: s(d.shippingMode, 40), notes: s(d.notes, 2000), status: "new", userId: request.auth?.uid || null,
-    recipients: Array.isArray(d.recipients) ? d.recipients.slice(0, 500).map((r) => ({ name: s(r.name, 80), address: s(r.address, 120), address2: s(r.address2, 60), city: s(r.city, 60), state: s(r.state, 2).toUpperCase(), zipCode: s(r.zipCode, 12), email: s(r.email, 120), note: s(r.note, 140) })).filter((r) => r.name && r.address && r.city && r.state && r.zipCode) : [],
+    recipients: Array.isArray(d.recipients) ? d.recipients.slice(0, 500).map((r) => ({ name: s(r?.name, 80), address: s(r?.address, 120), address2: s(r?.address2, 60), city: s(r?.city, 60), state: s(r?.state, 2).toUpperCase(), zipCode: s(r?.zipCode, 12), email: s(r?.email, 120), note: s(r?.note, 140) })).filter((r) => r.name && r.address && r.city && r.state && r.zipCode) : [],
     createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
   };
-  if (!quote.name || !quote.email || !quote.company) throw new HttpsError("invalid-argument", "Name, company and email are required.");
+  if (!quote.name || !quote.company) throw new HttpsError("invalid-argument", "Name, company and email are required.");
+  if (!email) throw new HttpsError("invalid-argument", "Please enter a valid email address.");
+  // This sends mail to an address the caller chooses, so cap it per address and per network.
+  await throttle("quote-ip", clientIp(request.rawRequest), 3, HOUR);
+  await throttle("quote-email", email, 3, HOUR);
   const ref = await db.collection("quotes").add(quote);
+  const e = esc;
+  const ownerHtml = `<p><b>${e(quote.name)}</b> at <b>${e(quote.company)}</b> (${e(quote.email)}${quote.phone ? ", " + e(quote.phone) : ""}) requested a quote.</p><ul><li>Quantity: ${quote.quantity}</li><li>Product: ${e(quote.product)}</li><li>Budget/unit: ${e(quote.budget)}</li><li>Needed by: ${e(quote.neededBy)}</li><li>Customization: ${e(quote.customization.join(", ") || "none")}</li><li>Shipping: ${e(quote.shippingMode)}${quote.recipients.length ? ` · ${quote.recipients.length} recipient addresses attached` : ""}</li></ul><p>${e(quote.notes)}</p><p><a href="${SITE_URL}/admin/quotes">Open in admin</a></p>`;
   const mail = await Promise.all([
-    sendMail({ to: OWNER_EMAIL, subject: `New corporate quote: ${quote.company} (${quote.quantity} units)`, html: `<p><b>${quote.name}</b> at <b>${quote.company}</b> (${quote.email}${quote.phone ? ", " + quote.phone : ""}) requested a quote.</p><ul><li>Quantity: ${quote.quantity}</li><li>Product: ${quote.product}</li><li>Budget/unit: ${quote.budget}</li><li>Needed by: ${quote.neededBy}</li><li>Customization: ${quote.customization.join(", ") || "none"}</li><li>Shipping: ${quote.shippingMode}${quote.recipients.length ? ` · ${quote.recipients.length} recipient addresses attached` : ""}</li></ul><p>${esc(quote.notes)}</p><p><a href="${SITE_URL}/admin/quotes">Open in admin</a></p>` }),
-    sendMail({ to: quote.email, subject: "We got your Kind Flames corporate gifting request", html: wrapEmail(`<h2>Thanks, ${esc(quote.name)}.</h2><p>We received your request for <b>${quote.quantity}</b> units for ${esc(quote.company)}. You'll hear from us within one business day with pricing and a mock-up.</p><p>In the meantime, our tiers: 25–49 units 10% off · 50–99 15% off · 100+ 20% off and free design.</p>`) }),
-  ]).catch((e) => { console.error("quote mail failed", e.message); return [{ ok: false, reason: e.message }]; });
-  await ref.update({ mailStatus: mail }).catch(() => {});
-  return { ok: true, id: ref.id, mail };
+    sendMail({ to: OWNER_EMAIL, subject: oneLine(`New corporate quote: ${quote.company} (${quote.quantity} units)`), html: ownerHtml }),
+    sendMail({ to: quote.email, subject: "We got your Kind Flames corporate gifting request", html: wrapEmail(`<h2>Thanks, ${e(quote.name)}.</h2><p>We received your request for <b>${quote.quantity}</b> units for ${e(quote.company)}. You'll hear from us within one business day with pricing and a mock-up.</p><p>In the meantime, our tiers: 25–49 units 10% off · 50–99 15% off · 100+ 20% off and free design.</p>`) }),
+  ]).catch((err) => { console.error("quote mail failed", err.message); return [{ ok: false, reason: err.message }]; });
+  await ref.update({ mailStatus: mail }).catch(() => {}); // provider detail stays server-side (admin-only doc)
+  return { ok: true, id: ref.id, mailed: mail.every((m) => m?.ok) };
+});
+
+/* ------------------------------- newsletter -------------------------------- */
+const NEWSLETTER_SOURCES = ["popup", "footer", "home", "checkout", "other"];
+/** The only way onto the list: validates, throttles, then creates newsletter/{email} (which starts the welcome series). */
+exports.subscribeNewsletter = onCall(PUBLIC_CALL, async (request) => {
+  const email = cleanEmail(request.data?.email);
+  if (!email) throw new HttpsError("invalid-argument", "Please enter a valid email address.");
+  const source = NEWSLETTER_SOURCES.includes(request.data?.source) ? request.data.source : "other";
+  await throttle("news-ip", clientIp(request.rawRequest), 10, HOUR);
+  await throttle("news-email", email, 3, 24 * HOUR);
+  try {
+    await db.doc(`newsletter/${email}`).create({ email, source, createdAt: FieldValue.serverTimestamp(), uid: request.auth?.uid || null });
+  } catch (e) {
+    if (e.code !== 6 /* ALREADY_EXISTS */) throw e; // already subscribed: same answer, no second welcome email
+  }
+  return { ok: true };
+});
+
+/* ------------------------------ back in stock ------------------------------ */
+const stockKey = (productId, variantId) => `${productId}_${variantId}`.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 200);
+/** "Notify me" on a sold-out variant: stores backInStock/{productId_variant}/requests/{hash(email)}. */
+exports.requestBackInStock = onCall(PUBLIC_CALL, async (request) => {
+  const { productId, variantId } = request.data || {};
+  const email = cleanEmail(request.data?.email);
+  if (!email) throw new HttpsError("invalid-argument", "Please enter a valid email address.");
+  if (!productId || !variantId || typeof productId !== "string" || typeof variantId !== "string") throw new HttpsError("invalid-argument", "Pick an option first.");
+  await throttle("bis-ip", clientIp(request.rawRequest), 20, HOUR);
+  await throttle("bis-email", email, 10, 24 * HOUR);
+  const product = await getProduct(productId);
+  const variant = product?.variants?.find((v) => v.id === variantId);
+  if (!product || !variant) throw new HttpsError("not-found", "That product isn't available.");
+  const key = stockKey(product.id, variant.id);
+  const parent = db.doc(`backInStock/${key}`);
+  await parent.set({ productId: product.id, variantId: variant.id, productName: product.name || product.id, variantLabel: variant.label || variant.id, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await parent.collection("requests").doc(sha(email).slice(0, 40)).set({ email, notified: false, uid: request.auth?.uid || null, createdAt: FieldValue.serverTimestamp() });
+  return { ok: true };
+});
+
+/** Emails everyone waiting on a variant when its stock goes from 0 to more than 0. */
+exports.onProductStockChanged = onDocumentWritten({ document: "products/{productId}", secrets: MAIL_SECRETS }, async (event) => {
+  const before = event.data?.before?.exists ? event.data.before.data() : null;
+  const after = event.data?.after?.exists ? event.data.after.data() : null;
+  if (!before || !after || after.active === false) return;
+  const restocked = variantsBackInStock(before, after);
+  for (const variantId of restocked) {
+    const variant = after.variants.find((v) => v.id === variantId);
+    const key = stockKey(event.params.productId, variantId);
+    let sent = 0;
+    await forEachPage(db.collection(`backInStock/${key}/requests`).where("notified", "==", false), async (docs) => {
+      for (const d of docs) {
+        const { email } = d.data();
+        if (email && !(await marketing.isUnsubscribed(email))) {
+          await sendMail({ to: email, subject: oneLine(`${after.name || "Your pick"} is back in stock`), html: wrapEmail(`<h2>It's back.</h2><p><b>${esc(after.name)}</b> (${esc(variant?.label || variantId)}) is in stock again. Small batches go quickly.</p><p><a href="${SITE_URL}/product/${encodeURIComponent(event.params.productId)}" style="color:#214238">Shop it now</a></p><p style="color:#6B7266;font-size:12px">You asked us to tell you when this restocked. This is a one-time email.</p>`) }).catch((e) => console.error("back-in-stock mail failed", e.message));
+          sent++;
+        }
+        await d.ref.update({ notified: true, notifiedAt: FieldValue.serverTimestamp() });
+      }
+    }, { pageSize: 200, orderById: true });
+    if (sent) console.log("back-in-stock emails", key, sent);
+  }
+});
+
+/* ------------------------------ stock + reservations ------------------------------ */
+/** Daily email to OWNER_EMAIL listing variants below settings.lowStockThreshold (default 5). */
+exports.lowStockReport = onSchedule({ schedule: "every day 08:00", timeZone: "America/New_York", secrets: MAIL_SECRETS }, async () => {
+  const settings = await getSettings();
+  const threshold = Number(settings.lowStockThreshold) > 0 ? Number(settings.lowStockThreshold) : 5;
+  const products = [];
+  await forEachPage(db.collection("products"), (docs) => { for (const d of docs) products.push({ id: d.id, ...d.data() }); }, { orderById: true });
+  const low = lowStockVariants(products, threshold);
+  if (!low.length || !OWNER_EMAIL) return;
+  const rows = low.map((l) => `<tr><td style="padding:4px 8px 4px 0">${esc(l.productName)}</td><td style="padding:4px 8px">${esc(l.label)}</td><td style="text-align:right;font-weight:700;color:${l.stock <= 0 ? "#B42318" : "#1E231D"}">${l.stock <= 0 ? "sold out" : l.stock}</td></tr>`).join("");
+  await sendMail({ to: OWNER_EMAIL, subject: oneLine(`Low stock: ${low.length} item${low.length === 1 ? "" : "s"} below ${threshold}`), html: wrapEmail(`<h2>Low stock</h2><p>These variants are below ${threshold} units:</p><table style="border-collapse:collapse;font-size:14px">${rows}</table><p><a href="${SITE_URL}/admin/products">Update stock in admin</a></p><p style="color:#6B7266;font-size:12px">Change the threshold in Admin → Settings.</p>`) });
+});
+
+/** Hourly: gives back discount reservations held by checkouts that were never paid (Stripe sessions expire at 24h). */
+exports.releaseExpiredReservations = onSchedule({ schedule: "every 60 minutes", timeZone: "America/New_York" }, async () => {
+  const cutoff = Date.now() - 26 * HOUR;
+  let released = 0;
+  await forEachPage(db.collection("orders").where("discountReservation.state", "==", "reserved"), async (docs) => {
+    for (const d of docs) {
+      const o = d.data();
+      const created = o.createdAt?.toMillis ? o.createdAt.toMillis() : 0;
+      if (o.paymentStatus === "paid" || created > cutoff) continue;
+      if (await releaseReservation(d.id).catch((e) => { console.error("release failed", d.id, e.message); return false; })) released++;
+    }
+  }, { orderById: true });
+  if (released) console.log("released expired discount reservations", released);
 });
 
 exports.createInvoice = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
@@ -890,7 +1197,7 @@ async function sendMail({ to, subject, html, text, headers }) {
   await db.collection("mail").add({ to, from: FROM_EMAIL, message: { subject, html, text: text || "" }, createdAt: FieldValue.serverTimestamp() });
   return { ok: true, via: "queue" };
 }
-const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = integrity.esc;
 function wrapEmail(body) {
   return `<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1E231D"><div style="background:#214238;color:#EAF2EC;padding:18px 24px;font-size:20px;font-weight:700">Kind Flames</div><div style="padding:24px;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5">${body}</div><div style="padding:16px 24px;font-size:12px;color:#6B7266;font-family:Helvetica,Arial,sans-serif">Shamyra Naturals LLC, d/b/a Kind Flames · hello@kindflames.com · (732) 666-8013</div></div>`;
 }
@@ -911,6 +1218,15 @@ async function sendShipped(order) {
   if (!order.email) return;
   const t = order.tracking || {};
   return sendMail({ to: order.email, subject: `Order ${order.number} is on its way`, html: wrapEmail(`<h2>Shipped.</h2><p>Your Kind Flames order <b>${order.number}</b> left us today${t.carrier ? ` via ${esc(t.carrier)}` : ""}.</p>${t.number ? `<p>Tracking: <a href="${t.url || "#"}">${esc(t.number)}</a></p>` : ""}<p>Candle tip: trim the wick to ¼″ and let the first burn reach the edge of the jar.</p>`) });
+}
+async function sendRefundEmail(order, amount, reason, full) {
+  if (!order.email) return { ok: false, reason: "no email" };
+  const via = order.payment?.provider === "paypal" ? "your PayPal account" : "your card";
+  return sendMail({ to: order.email, subject: oneLine(`Refund for order ${order.number}${full ? "" : " (partial)"} — Kind Flames`), html: wrapEmail(`<h2>Your refund is on its way.</h2><p>We've refunded <b>${fmt(amount)}</b> on order <b>${esc(order.number)}</b> to ${via}${full ? "" : `; ${fmt(order.refundedTotal)} of ${fmt(order.total)} refunded so far`}.</p>${reason ? `<p><b>Note:</b> ${esc(reason)}</p>` : ""}<p>Depending on your bank it can take 5–10 business days to show up.</p><p>Questions? Just reply to this email.</p>`) });
+}
+async function sendOwnerOversold(order, oversold) {
+  const rows = oversold.map((o) => `<li>${esc(o.name)} (${esc(o.variantId)}): ordered ${o.ordered}, only ${o.available} in stock</li>`).join("");
+  return sendMail({ to: OWNER_EMAIL, subject: oneLine(`Oversold: order ${order.number} needs attention`), html: wrapEmail(`<h2>Order ${esc(order.number)} was paid for more than you had.</h2><p>Two checkouts raced for the last units, or stock was edited while the customer paid.</p><ul>${rows}</ul><p>Stock is now 0 for these. Restock and ship, or contact ${esc(order.email)} and refund the missing items.</p><p><a href="${SITE_URL}/admin/orders/${encodeURIComponent(order.id)}">Open the order</a></p>`) });
 }
 function trackingUrl(t) {
   const n = encodeURIComponent(String(t.number || ""));
