@@ -3,9 +3,11 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
-import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics';
+import { getAnalytics, isSupported, setConsent, type Analytics } from 'firebase/analytics';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, ReCaptchaV3Provider } from 'firebase/app-check';
 import { isProdEnv } from '../lib/env';
+import { consentModeSettings } from '../lib/consent';
+import { isPrerender } from '../lib/prerender';
 
 // Web app config comes from Vite env files: .env.production (shamyra-web), .env.test (test project), and the
 // git-ignored .env for `npm run dev`. All of it is public (it ships in the bundle). See docs/ENVIRONMENTS.md.
@@ -47,8 +49,13 @@ export const storage = getStorage(app);
 export const functions = getFunctions(app, 'us-central1');
 if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') connectFunctionsEmulator(functions, 'localhost', 5001);
 
-// Google Analytics only for the real store: test builds and the dev server never report.
+// Google Analytics only for the real store: test builds, the dev server and the build-time prerender never report.
+// Consent Mode defaults (everything optional denied until the visitor chooses; see lib/consent.ts) are set
+// before gtag loads, so GA4 starts cookieless.
 export let analytics: Analytics | null = null;
-if (isProdEnv() && firebaseConfig.measurementId) isSupported().then((ok) => { if (ok) analytics = getAnalytics(app); }).catch(() => {});
+if (isProdEnv() && firebaseConfig.measurementId && !isPrerender()) {
+  try { setConsent(consentModeSettings()); } catch { /* ignore */ }
+  isSupported().then((ok) => { if (ok) analytics = getAnalytics(app); }).catch(() => {});
+}
 
 export default app;

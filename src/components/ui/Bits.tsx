@@ -1,6 +1,6 @@
-import { useRef, type ReactNode } from 'react';
+import { cloneElement, isValidElement, useId, useRef, type ReactElement, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, Flame, Leaf, Package, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
-import { srcSet, imgAt } from '../../lib/images';
+import { srcSet, imgAt, unsplashSrcSet, CARD_WIDTHS } from '../../lib/images';
 import { placeholderImages } from '../../data/imagery';
 import { useCatalog } from '../../context/CatalogContext';
 import type { Product } from '../../types';
@@ -24,15 +24,30 @@ export const SectionHead = ({ eyebrow, title, action, center, sub }: { eyebrow?:
   </div>
 );
 
-export const Field = ({ label, children, hint, className = '' }: { label: string; children: ReactNode; hint?: string; className?: string }) => (
-  <div className={`min-w-0 ${className}`}><label className="label">{label}</label>{children}{hint && <p className="mt-1 text-xs text-muted">{hint}</p>}</div>
-);
+type FieldControlProps = { id?: string; 'aria-describedby'?: string };
+/** Label + control. The label is tied to the control with htmlFor/id (the control's own id wins, else one is
+ *  generated) and the hint is linked with aria-describedby. Wrap exactly one input/select/textarea. */
+export const Field = ({ label, children, hint, className = '' }: { label: string; children: ReactNode; hint?: string; className?: string }) => {
+  const auto = useId();
+  const control = isValidElement<FieldControlProps>(children) && ['input', 'select', 'textarea'].includes(children.type as string) ? (children as ReactElement<FieldControlProps>) : null;
+  const id = control?.props.id || auto;
+  const hintId = hint ? `${id}-hint` : undefined;
+  const describedBy = [control?.props['aria-describedby'], hintId].filter(Boolean).join(' ') || undefined;
+  return (
+    <div className={`min-w-0 ${className}`}>
+      <label className="label" htmlFor={control ? id : undefined}>{label}</label>
+      {control ? cloneElement(control, { id, 'aria-describedby': describedBy }) : children}
+      {hint && <p id={hintId} className="mt-1 text-xs text-muted">{hint}</p>}
+    </div>
+  );
+};
 
 export const Alert = ({ children, tone = 'bad' }: { children: ReactNode; tone?: 'bad' | 'good' | 'warn' }) => (
   <div role="alert" className={`rounded-card border px-4 py-3 text-sm ${tone === 'bad' ? 'border-bad/30 bg-bad/10 text-bad' : tone === 'good' ? 'border-good/30 bg-good/10 text-good' : 'border-warn/30 bg-warn/10 text-warn'}`}>{children}</div>
 );
 
 /** All images for a product, honouring the placeholder-photo mode (Admin → Appearance). */
+// eslint-disable-next-line react-refresh/only-export-components -- small hook shared by the product components
 export function useProductImages(product: Product): string[] {
   const { settings } = useCatalog();
   if (settings.placeholderImages !== false) return placeholderImages(product.id);
@@ -45,12 +60,14 @@ export const ProductImage = ({ product, size = 800, className = '', eager, index
   if (!src) return <div className={`flex items-center justify-center bg-surface-2 text-muted ${className}`}>No photo</div>;
   const second = hover ? imgs[1] : undefined;
   const local = src.startsWith('/');
-  const img = (s: string, extra = '') => <img src={local ? imgAt(s, size) : s} srcSet={local ? srcSet(s) : undefined} sizes={size === 400 ? '(max-width: 640px) 50vw, 25vw' : '(max-width: 860px) 100vw, 50vw'} alt={product.name} loading={eager ? 'eager' : 'lazy'} decoding="async" className={`object-cover ${className} ${extra}`} />;
+  const sizes = size === 400 ? '(max-width: 767px) 50vw, (max-width: 1279px) 33vw, 300px' : '(max-width: 1023px) 100vw, 50vw';
+  const set = (s: string) => (local ? srcSet(s) : unsplashSrcSet(s, CARD_WIDTHS));
+  const img = (s: string, extra = '') => <img src={local ? imgAt(s, size) : s} srcSet={set(s)} sizes={sizes} alt={product.name} loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : 'low'} decoding="async" className={`object-cover ${className} ${extra}`} />;
   if (!second || second === src) return img(src);
   return (
     <span className="group/img relative block h-full w-full">
       {img(src, 'transition-opacity duration-500 group-hover/img:opacity-0')}
-      <img src={second} alt="" aria-hidden="true" loading="lazy" decoding="async" className={`absolute inset-0 object-cover opacity-0 transition-opacity duration-500 group-hover/img:opacity-100 ${className}`} />
+      <img src={second} srcSet={set(second)} sizes={sizes} alt="" aria-hidden="true" loading="lazy" decoding="async" className={`absolute inset-0 object-cover opacity-0 transition-opacity duration-500 group-hover/img:opacity-100 ${className}`} />
     </span>
   );
 };

@@ -1,7 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { loadProducts, activeOnly, listed } from '../lib/catalog';
+import { loadProducts, activeOnly, listed, LOCAL_CATALOG } from '../lib/catalog';
+import { isPrerender } from '../lib/prerender';
+import { isThemeId } from '../themes';
 import type { Product, StoreSettings } from '../types';
 
 export const DEFAULT_SETTINGS: StoreSettings = {
@@ -22,10 +24,25 @@ interface CatalogContextType {
 const CatalogContext = createContext<CatalogContextType | undefined>(undefined);
 export const useCatalog = () => { const c = useContext(CatalogContext); if (!c) throw new Error('useCatalog outside provider'); return c; };
 
+/** Bundled catalog, sorted: what the first render (and the prerendered HTML) shows before Firestore answers. */
+const INITIAL_PRODUCTS: Product[] = [...LOCAL_CATALOG].sort((a, b) => a.sortOrder - b.sortOrder);
+/** Start from the theme the last visit saw (index.html applies it before paint) so the page does not flip back to
+ *  the default theme while settings load. */
+const initialSettings = (): StoreSettings => {
+  if (isPrerender()) return DEFAULT_SETTINGS;
+  try { const t = localStorage.getItem('kf_theme'); if (isThemeId(t)) return { ...DEFAULT_SETTINGS, theme: t }; } catch { /* ignore */ }
+  return DEFAULT_SETTINGS;
+};
+
+/**
+ * Renders from the bundled catalog immediately (no "Loading…" flash, no layout shift) and swaps in Firestore
+ * products/settings in the background. `loading` stays true until Firestore answers, so pages can tell
+ * "not in the bundled catalog yet" from "does not exist".
+ */
 export const CatalogProvider = ({ children }: { children: ReactNode }) => {
-  const [allProducts, setAll] = useState<Product[]>([]);
-  const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
+  const [allProducts, setAll] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [settings, setSettings] = useState<StoreSettings>(initialSettings);
+  const [loading, setLoading] = useState(!isPrerender());
   const [source, setSource] = useState<'firestore' | 'local'>('local');
 
   const refresh = useCallback(async () => {
@@ -38,7 +55,8 @@ export const CatalogProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  // The build-time prerender renders the bundled catalog only, so its HTML is deterministic and matches first paint.
+  useEffect(() => { if (!isPrerender()) refresh(); }, [refresh]);
 
   const products = useMemo(() => listed(allProducts), [allProducts]);
   const active = useMemo(() => activeOnly(allProducts), [allProducts]);

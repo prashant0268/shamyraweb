@@ -2,6 +2,7 @@
  * Meta (Facebook) Pixel loader. Reads VITE_META_PIXEL_ID at build time; when it is unset
  * nothing is injected and window.fbq stays undefined, so every caller must guard on it.
  * Events are mirrored from GA4 in ./analytics.ts.
+ * Only ./consent.ts calls initMetaPixel(), and only after the visitor allows ads & marketing (never with GPC on).
  */
 declare global {
   interface Window { fbq?: (...args: unknown[]) => void; _fbq?: unknown }

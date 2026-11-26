@@ -5,6 +5,7 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import CartDrawer from './CartDrawer';
 import WelcomePopup from './WelcomePopup';
+import ConsentBanner from './ConsentBanner';
 import { useTheme } from '../../context/ThemeContext';
 import { themeMeta } from '../../themes';
 import { ENV_LABEL, FIREBASE_PROJECT_ID } from '../../lib/env';
@@ -17,12 +18,14 @@ export default function Layout({ children }: { children: ReactNode }) {
   useEffect(() => { const c = params.get('code'); if (c) { try { localStorage.setItem('kf_code', c.toUpperCase()); } catch { /* ignore */ } } }, [params]);
   return (
     <div className="flex min-h-screen flex-col">
+      <a href="#main" className="skip-link">Skip to content</a>
       <AnnouncementBar />
       <Navbar />
-      <main className="flex-1">{children}</main>
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">{children}</main>
       <Footer />
       <CartDrawer />
       <WelcomePopup />
+      <ConsentBanner />
       {preview && <div className="fixed bottom-4 left-4 z-[80] rounded-pill bg-ink px-3 py-1.5 text-xs font-semibold text-bg shadow-lg">Previewing theme: {themeMeta(theme).name} · <a href="?theme=reset" className="underline">exit</a></div>}
       {ENV_LABEL && <div className="fixed bottom-4 right-4 z-[80] rounded-pill bg-warn px-3 py-1.5 text-xs font-bold tracking-wide text-white shadow-lg print:hidden" role="status" title={FIREBASE_PROJECT_ID ? `Firebase project: ${FIREBASE_PROJECT_ID}` : undefined}>{ENV_LABEL}</div>}
     </div>

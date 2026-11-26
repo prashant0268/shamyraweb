@@ -8,7 +8,7 @@
   --color-surface: #FFFFFF;
   --color-surface-2: #EBE7DE;
   --color-ink: #1E231D;
-  --color-muted: #6B7266;
+  --color-muted: #62685D;
   --color-line: #DDD9CF;
   --color-honey: #C68A1E;
   --color-honey-dark: #A8731A;
@@ -16,9 +16,11 @@
   --color-pine: #214238;
   --color-pine-dark: #17302A;
   --color-pine-ink: #EAF2EC;
-  --color-good: #2E7D4F;
-  --color-warn: #B9770E;
+  --color-good: #2C794C;
+  --color-warn: #95600B;
   --color-bad: #B23A3A;
+  /* Keyboard focus ring: 3:1+ against bg, surface and surface-2 in every theme (WCAG 2.2 AA). */
+  --color-focus: #214238;
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-body: "Karla", system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-btn: 999px;
@@ -45,6 +47,7 @@
   --color-ink: #141414; --color-muted: #6E6E6B; --color-line: #E3E1DC;
   --color-honey: #141414; --color-honey-dark: #000000; --color-honey-ink: #FFFFFF;
   --color-pine: #141414; --color-pine-dark: #000000; --color-pine-ink: #FFFFFF;
+  --color-focus: #141414;
   --font-display: "Cormorant Garamond", "Times New Roman", serif;
   --font-body: "Inter", system-ui, sans-serif;
   --radius-btn: 0; --radius-card: 0; --radius-img: 0; --radius-pill: 0; --radius-input: 0;
@@ -59,6 +62,7 @@
   --color-honey: #C9A24E; --color-honey-dark: #A9863A; --color-honey-ink: #1A1408;
   --color-pine: #F3ECDD; --color-pine-dark: #E2D8C3; --color-pine-ink: #15130F;
   --color-good: #7FBF95; --color-warn: #E0B35A; --color-bad: #E07A7A;
+  --color-focus: #C9A24E;
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "Jost", system-ui, sans-serif;
   --radius-btn: 2px; --radius-card: 4px; --radius-img: 4px; --radius-pill: 2px; --radius-input: 2px;
@@ -69,9 +73,10 @@
 
 [data-theme="sunroom"] {
   --color-bg: #FBF5EC; --color-surface: #FFFFFF; --color-surface-2: #F3E8D8;
-  --color-ink: #2B2320; --color-muted: #7A6A62; --color-line: #E9DCCB;
-  --color-honey: #C9643B; --color-honey-dark: #A84F2C; --color-honey-ink: #FFF7F0;
+  --color-ink: #2B2320; --color-muted: #73645D; --color-line: #E9DCCB;
+  --color-honey: #B05733; --color-honey-dark: #8F4628; --color-honey-ink: #FFF7F0;
   --color-pine: #1F5F5B; --color-pine-dark: #164744; --color-pine-ink: #E6F3F1;
+  --color-focus: #1F5F5B;
   --font-display: "DM Serif Display", Georgia, serif;
   --font-body: "DM Sans", system-ui, sans-serif;
   --radius-btn: 999px; --radius-card: 1.25rem; --radius-img: 1.5rem; --radius-pill: 999px; --radius-input: 0.875rem;
@@ -81,9 +86,10 @@
 
 [data-theme="apothecary"] {
   --color-bg: #EEF0EA; --color-surface: #FFFFFF; --color-surface-2: #E2E6DC;
-  --color-ink: #22291F; --color-muted: #66705F; --color-line: #D3D9CC;
-  --color-honey: #B5785A; --color-honey-dark: #96603F; --color-honey-ink: #FFF6F0;
+  --color-ink: #22291F; --color-muted: #5E6858; --color-line: #D3D9CC;
+  --color-honey: #98644B; --color-honey-dark: #7C5139; --color-honey-ink: #FFF6F0;
   --color-pine: #3D4F36; --color-pine-dark: #2D3B28; --color-pine-ink: #EEF3E9;
+  --color-focus: #3D4F36;
   --font-display: "Lora", Georgia, serif;
   --font-body: "Nunito Sans", system-ui, sans-serif;
   --radius-btn: 6px; --radius-card: 10px; --radius-img: 10px; --radius-pill: 6px; --radius-input: 6px;
@@ -96,12 +102,16 @@
   html { scroll-behavior: smooth; }
   body { background-color: var(--color-bg); color: var(--color-ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
   h1, h2, h3, h4 { font-family: var(--font-display); font-weight: var(--display-weight); line-height: 1.1; text-wrap: balance; }
-  :focus-visible { outline: 2px solid var(--color-honey); outline-offset: 2px; }
+  /* Focus ring in the theme's focus color with a surface-colored halo in the offset gap, so it stays visible on
+     photos and dark bands too. */
+  :focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-surface); }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 }
 
 /* ---- Components ---------------------------------------------------------- */
 @layer components {
+  .skip-link { position: absolute; left: 0.75rem; top: 0.75rem; z-index: 100; transform: translateY(-200%); background: var(--color-ink); color: var(--color-bg); padding: 0.6rem 1rem; border-radius: var(--radius-btn); font-weight: 700; }
+  .skip-link:focus { transform: none; }
   .wrap { max-width: 80rem; margin-inline: auto; padding-inline: 1rem; }
   @media (min-width: 640px) { .wrap { padding-inline: 1.5rem; } }
   @media (min-width: 1280px) { .wrap { padding-inline: 2.5rem; } }

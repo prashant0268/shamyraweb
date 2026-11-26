@@ -52,6 +52,7 @@ function clientIp(rawRequest) {
 /* ------------------------------ email safety -------------------------------- */
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 /** For email subjects/headers: no CR/LF (header injection) and no other control characters. */
+// eslint-disable-next-line no-control-regex -- strips control chars on purpose
 const oneLine = (s, max = 200) => String(s ?? "").replace(/[\r\n\t\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
 /* -------------------------------- discounts --------------------------------- */

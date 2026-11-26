@@ -6,6 +6,7 @@ import { useCatalog } from '../../context/CatalogContext';
 import { useToast } from '../../context/ToastContext';
 import { track } from '../../lib/analytics';
 import Button from '../ui/Button';
+import { openConsentSettings } from '../../lib/consent';
 
 const PAYMENTS = ['Visa', 'Mastercard', 'Amex', 'Discover', 'PayPal', 'Apple Pay', 'Google Pay'];
 
@@ -52,7 +53,7 @@ export default function Footer() {
       </div>
       <div className="border-t border-line">
         <div className="wrap flex flex-wrap items-center justify-between gap-3 py-4 text-xs text-muted">
-          <span>© {new Date().getFullYear()} {settings.legalName}, d/b/a {settings.brandName}. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} {settings.legalName}, d/b/a {settings.brandName}. All rights reserved. <button type="button" onClick={openConsentSettings} className="ml-1 underline hover:text-ink">Privacy choices</button></span>
           <ul className="flex flex-wrap gap-1.5" aria-label="Accepted payments">{PAYMENTS.map((p) => <li key={p} className="rounded-pill border border-line px-2 py-0.5 font-semibold">{p}</li>)}</ul>
         </div>
       </div>

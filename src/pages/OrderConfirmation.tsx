@@ -6,7 +6,7 @@ import { getOrder } from '../services/orders';
 import { verifyStripePayment, errorMessage } from '../services/api';
 import { money } from '../lib/format';
 import { useSeo } from '../lib/seo';
-import { track } from '../lib/analytics';
+import { trackPurchaseOnce } from '../lib/analytics';
 import Button from '../components/ui/Button';
 import { Alert } from '../components/ui/Bits';
 import type { Order } from '../types';
@@ -30,13 +30,13 @@ export default function OrderConfirmation() {
       try {
         if (sessionId) {
           const r = await verifyStripePayment({ sessionId, orderId });
-          if (r.paid && r.order) { setOrder(r.order); setState('paid'); clear(); track('purchase', { transaction_id: r.order.number, value: r.order.total, currency: 'USD' }); return; }
+          if (r.paid && r.order) { setOrder(r.order); setState('paid'); clear(); trackPurchaseOnce(orderId, { transaction_id: r.order.number, value: r.order.total, currency: 'USD' }); return; }
           setState('unpaid'); return;
         }
         const o = await getOrder(orderId);
         if (!o) { setErr('We could not find that order.'); setState('error'); return; }
         setOrder(o); setState(o.paymentStatus === 'paid' ? 'paid' : 'unpaid');
-        if (o.paymentStatus === 'paid') track('purchase', { transaction_id: o.number, value: o.total, currency: 'USD' });
+        if (o.paymentStatus === 'paid') trackPurchaseOnce(orderId, { transaction_id: o.number, value: o.total, currency: 'USD' });
       } catch (e) { setErr(errorMessage(e)); setState('error'); }
     })();
   }, [loading, orderId, sessionId, user]); // eslint-disable-line react-hooks/exhaustive-deps

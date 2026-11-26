@@ -5,7 +5,7 @@ const [base, out] = process.argv.slice(2);
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 for (const theme of ['hearth', 'atelier', 'noir', 'sunroom', 'apothecary']) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-  await ctx.addInitScript(() => { try { localStorage.setItem('kf_popup_seen', String(Date.now())); } catch {} });
+  await ctx.addInitScript(() => { try { localStorage.setItem('kf_popup_seen', String(Date.now())); } catch { /* ignore */ } });
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
   await page.goto(`${base}/?theme=${theme}`, { waitUntil: 'load' });

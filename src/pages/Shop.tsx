@@ -4,7 +4,9 @@ import { useCatalog } from '../context/CatalogContext';
 import { byCategory, minPrice } from '../lib/catalog';
 import { useSeo } from '../lib/seo';
 import { IMG, FAMILY_IMAGES, FAMILY_BLURBS } from '../data/imagery';
+import { heroImgProps } from '../lib/images';
 import ProductCard from '../components/ui/ProductCard';
+import NotFound from './NotFound';
 import { CATEGORY_LABELS, type Category } from '../types';
 
 const CATS: { key: Category | 'all' | 'body'; label: string }[] = [{ key: 'all', label: 'All' }, { key: 'candle', label: 'Candles' }, { key: 'body', label: 'Bath & Body' }, { key: 'scrub', label: 'Scrubs' }, { key: 'lotion', label: 'Lotions' }, { key: 'salt', label: 'Bath Salts' }, { key: 'set', label: 'Gift Sets' }];
@@ -20,9 +22,10 @@ export default function Shop() {
   const family = params.get('family') || '';
   const sort = params.get('sort') || 'featured';
   const max = Number(params.get('max') || 0);
-  const cat = (CATS.some((c) => c.key === category) ? category : 'all') as Category | 'all' | 'body';
+  const known = CATS.some((c) => c.key === category);
+  const cat = (known ? category : 'all') as Category | 'all' | 'body';
   const title = family ? `${family} scents` : q ? `Results for “${q}”` : max ? `${TITLES[cat]} under $${max}` : TITLES[cat];
-  useSeo({ title: `${TITLES[cat]}${q ? ` · “${q}”` : ''}${family ? ` · ${family}` : ''}`, description: `Shop ${(TITLES[cat] || '').toLowerCase()} from Kind Flames — hand-poured candles and small-batch bath & body.`, path: `/shop${cat === 'all' ? '' : '/' + cat}` });
+  useSeo({ title: !known ? 'Page not found' : `${TITLES[cat]}${q ? ` · “${q}”` : ''}${family ? ` · ${family}` : ''}`, description: `Shop ${(TITLES[cat] || '').toLowerCase()} from Kind Flames — hand-poured candles and small-batch bath & body.`, path: `/shop${cat === 'all' ? '' : '/' + cat}`, noindex: !known });
 
   const families = useMemo(() => [...new Set(byCategory(products, cat).map((p) => p.family))].filter((f) => f !== 'Mixed').sort(), [products, cat]);
   const list = useMemo(() => {
@@ -40,10 +43,11 @@ export default function Shop() {
   const pill = (on: boolean) => `nav-link whitespace-nowrap rounded-pill border px-4 py-1.5 text-sm ${on ? 'border-ink bg-ink text-bg' : 'border-line bg-surface hover:bg-surface-2'}`;
   const banner = family && FAMILY_IMAGES[family] ? FAMILY_IMAGES[family] : BANNERS[cat];
 
+  if (!known) return <NotFound />;
   return (
     <div>
       <section className="relative isolate overflow-hidden bg-pine text-white">
-        <img src={banner} alt="" className="absolute inset-0 h-full w-full object-cover" loading="eager" />
+        {banner && <img {...heroImgProps(banner)} alt="" className="absolute inset-0 h-full w-full object-cover" loading="eager" fetchPriority="high" />}
         <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/10" />
         <div className="wrap relative py-12 sm:py-16">
           <div className="eyebrow !text-white/75">{family ? 'Scent family' : 'Shop'}</div>
@@ -65,7 +69,7 @@ export default function Shop() {
           <label className="flex items-center gap-2 text-sm text-muted"><span className="nav-link text-xs">Sort</span><select value={sort} onChange={(e) => set('sort', e.target.value === 'featured' ? '' : e.target.value)} className="input w-auto py-1.5 text-sm" aria-label="Sort"><option value="featured">Featured</option><option value="new">Newest</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label>
           </div>
         </div>
-        <div className="mt-6 flex items-center justify-between text-sm text-muted"><span>{loading ? 'Loading…' : `${list.length} product${list.length === 1 ? '' : 's'}`}</span>{(family || max || q || sort !== 'featured') && <Link to={cat === 'all' ? '/shop' : `/shop/${cat}`} className="underline">Clear filters</Link>}</div>
+        <div className="mt-6 flex items-center justify-between text-sm text-muted"><span aria-live="polite">{`${list.length} product${list.length === 1 ? '' : 's'}`}</span>{(family || max || q || sort !== 'featured') && <Link to={cat === 'all' ? '/shop' : `/shop/${cat}`} className="underline">Clear filters</Link>}</div>
         {!loading && list.length === 0 ? (
           <div className="py-16 text-center text-muted">Nothing matches. <Link to="/shop" className="text-pine underline">Clear filters</Link></div>
         ) : (

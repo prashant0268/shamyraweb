@@ -9,7 +9,9 @@ import { useSeo } from '../lib/seo';
 import { track } from '../lib/analytics';
 import { subscribeNewsletter, errorMessage } from '../services/api';
 import { themeMeta } from '../themes';
+import { preload } from 'react-dom';
 import { IMG, FAMILY_IMAGES, FAMILY_BLURBS } from '../data/imagery';
+import { heroImgProps, unsplashAt, unsplashSrcSet, CARD_WIDTHS } from '../lib/images';
 import ProductCard from '../components/ui/ProductCard';
 import Button from '../components/ui/Button';
 import { Rail, SectionHead, Stars, ValueStrip } from '../components/ui/Bits';
@@ -41,7 +43,9 @@ export default function Home() {
   const fresh = products.filter((p) => p.isNewArrival).slice(0, 4);
   const christmas = products.filter((p) => p.collections?.includes('christmas')).slice(0, 4);
   const families = useMemo(() => [...new Set(products.map((p) => p.family))].filter((f) => FAMILY_IMAGES[f]), [products]);
-  const hero = IMG[themeMeta(theme).heroImage];
+  const hero = heroImgProps(IMG[themeMeta(theme).heroImage]);
+  // Hint the LCP image in <head> (the prerender snapshot keeps it, so the browser fetches it before any JS runs).
+  preload(hero.src, { as: 'image', imageSrcSet: hero.srcSet, imageSizes: hero.sizes, fetchPriority: 'high' });
 
   useEffect(() => {
     getDocs(query(collection(db, 'reviews'), where('approved', '==', true), limit(12)))
@@ -61,7 +65,7 @@ export default function Home() {
     <>
       {/* Hero */}
       <section className="relative isolate min-h-[70vh] overflow-hidden bg-pine text-white sm:min-h-[76vh]">
-        <img src={hero} alt="" className="absolute inset-0 h-full w-full object-cover" loading="eager" fetchPriority="high" />
+        <img {...hero} alt="" className="absolute inset-0 h-full w-full object-cover" loading="eager" fetchPriority="high" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
         <div className="wrap relative flex min-h-[70vh] flex-col justify-end gap-5 py-14 sm:min-h-[76vh] sm:justify-center">
           <div className="eyebrow !text-white/80">Hand-poured in New Jersey · Coconut-soy · Phthalate-free</div>
@@ -78,7 +82,7 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
           {TILES.map((t) => (
             <Link key={t.to} to={t.to} className="group relative block aspect-[4/5] overflow-hidden rounded-img bg-surface-2">
-              <img src={t.img} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+              <img src={unsplashAt(t.img, 600)} srcSet={unsplashSrcSet(t.img, CARD_WIDTHS)} sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 20vw" alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" fetchPriority="low" />
               <span className="hero-overlay absolute inset-0" />
               <span className="absolute inset-x-0 bottom-0 p-4 text-white"><span className="block font-display text-xl leading-tight sm:text-2xl">{t.label}</span><span className="block text-xs opacity-90">{t.sub}</span></span>
             </Link>
