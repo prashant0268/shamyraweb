@@ -41,6 +41,9 @@ const IS_PRODUCTION = String(ENV.IS_PRODUCTION ?? "true").trim().toLowerCase() !
 const ADMIN_EMAILS = (ENV.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 const OWNER_EMAIL = ENV.OWNER_EMAIL || ADMIN_EMAILS[0] || "";
 const FROM_EMAIL = ENV.FROM_EMAIL || "Kind Flames <orders@kindflames.com>";
+/** Physical postal address printed in every email footer (CAN-SPAM). Set MAILING_ADDRESS in functions/.env. */
+const MAILING_ADDRESS = (ENV.MAILING_ADDRESS || "").trim();
+if (!MAILING_ADDRESS && IS_PRODUCTION) console.warn("MAILING_ADDRESS is not set: marketing email footers have no postal address (CAN-SPAM).");
 // Feature flags that change which secrets a function binds live in features.json (read at both deploy-analysis
 // and runtime). .env values are NOT visible during the CLI's deploy analysis, so they can't gate secret bindings.
 // features.<projectId>.json (optional) overrides features.json for one project, e.g. the webhook only on test.
@@ -294,8 +297,11 @@ exports.createStripeCheckout = onCall({ cors: true, secrets: STRIPE_SECRETS }, a
     payment_intent_data: { description: `Kind Flames order ${order.number}`, metadata: { orderId: order.id } },
   };
   if (pricing.discountTotal > 0) {
-    const coupon = await stripe.coupons.create({ amount_off: cents(pricing.discountTotal), currency: "usd", duration: "once", name: pricing.discount.code ? `${pricing.discount.code}${pricing.bundleDiscount ? " + bundle" : ""}` : "Bundle discount" });
-    sessionParams.discounts = [{ coupon: coupon.id }];
+    const name = pricing.discount.code ? `${pricing.discount.code}${pricing.bundleDiscount ? " + bundle" : ""}` : "Bundle discount";
+    const couponId = `kf_${cents(pricing.discountTotal)}_${sha(name).slice(0, 10)}`; // reused across checkouts
+    await stripe.coupons.retrieve(couponId).catch(() => stripe.coupons.create({ id: couponId, amount_off: cents(pricing.discountTotal), currency: "usd", duration: "once", name }))
+      .catch((e) => { if (!/already exists/i.test(e.message)) throw e; });
+    sessionParams.discounts = [{ coupon: couponId }];
   }
   const session = await stripe.checkout.sessions.create(sessionParams);
   await db.doc(`orders/${order.id}`).update({ stripeSessionId: session.id });
@@ -389,6 +395,13 @@ async function handleStripeEvent(stripe, event) {
       await notifyOwner(`Payment failed for order ${snap.data().number}`, `<p>The delayed card/bank payment for ${orderLink({ id: snap.id, ...snap.data() })} failed. The order was not marked paid; don't ship it.</p>`);
       return;
     }
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted": {
+      if (!(await db.doc(`subscriptions/${obj.id}`).get()).exists && event.type !== "customer.subscription.deleted") return; // verifySubscription creates it with the address
+      await upsertSubscriptionDoc(obj);
+      return;
+    }
     case "charge.refunded": {
       const order = await findOrderByPaymentIntent(stripe, obj.payment_intent);
       if (!order) { console.error("stripe webhook: no order for refunded charge", obj.id); return; }
@@ -413,7 +426,8 @@ async function handleStripeEvent(stripe, event) {
 if (ENABLE_STRIPE_WEBHOOK) {
   // Endpoint: https://us-central1-<projectId>.cloudfunctions.net/stripeWebhook. Events: checkout.session.completed,
   // checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, charge.refunded,
-  // charge.dispute.created. See docs/ENVIRONMENTS.md ("Payment webhooks").
+  // charge.dispute.created, customer.subscription.updated, customer.subscription.deleted.
+  // See docs/ENVIRONMENTS.md ("Payment webhooks").
   exports.stripeWebhook = onRequest({ secrets: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", ...MAIL_SECRETS] }, async (req, res) => {
     const stripe = getStripe();
     let event;
@@ -913,6 +927,28 @@ exports.submitQuote = onCall({ ...PUBLIC_CALL, secrets: MAIL_SECRETS }, async (r
 /* ------------------------------- newsletter -------------------------------- */
 const NEWSLETTER_SOURCES = ["popup", "footer", "home", "checkout", "other"];
 /** The only way onto the list: validates, throttles, then creates newsletter/{email} (which starts the welcome series). */
+/** Guest order status: order number + the email it was placed with. Throttled; reveals nothing on a mismatch. */
+exports.lookupOrder = onCall(PUBLIC_CALL, async (request) => {
+  const number = String(request.data?.number || "").trim().toUpperCase().replace(/^#/, "").replace(/^(\d+)$/, "KF-$1").slice(0, 20);
+  const email = cleanEmail(request.data?.email);
+  if (!/^KF-\d{1,9}$/.test(number) || !email) throw new HttpsError("invalid-argument", "Enter your order number (like KF-1042) and the email you used at checkout.");
+  await throttle("lookup-ip", clientIp(request.rawRequest), 10, HOUR);
+  await throttle("lookup-num", number, 10, HOUR);
+  const snap = await db.collection("orders").where("number", "==", number).limit(1).get();
+  const o = snap.empty ? null : snap.docs[0].data();
+  const matches = o && (o.emailNormalized === normalizeEmail(email) || String(o.email || "").toLowerCase() === email);
+  if (!matches) throw new HttpsError("not-found", "We couldn't find an order with that number and email.");
+  const ms = (t) => (t?.toMillis ? t.toMillis() : null);
+  const t = o.tracking || null;
+  return {
+    number: o.number, status: o.status, paymentStatus: o.paymentStatus, createdAt: ms(o.createdAt), paidAt: ms(o.paidAt),
+    items: (o.items || []).map((i) => ({ name: i.name, variantLabel: i.variantLabel, quantity: i.quantity, image: i.image || "" })),
+    total: o.total, refundedTotal: o.refundedTotal || 0,
+    shipTo: o.shippingAddress ? { city: o.shippingAddress.city, state: o.shippingAddress.state } : null,
+    tracking: t?.number ? { carrier: t.carrier || "", number: t.number, url: t.url || trackingUrl(t) } : null,
+  };
+});
+
 exports.subscribeNewsletter = onCall(PUBLIC_CALL, async (request) => {
   const email = cleanEmail(request.data?.email);
   if (!email) throw new HttpsError("invalid-argument", "Please enter a valid email address.");
@@ -1001,7 +1037,7 @@ exports.releaseExpiredReservations = onSchedule({ schedule: "every 60 minutes", 
 
 exports.createInvoice = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
   requireAdmin(request);
-  const { quoteId, lines, daysUntilDue = 30, memo } = request.data || {};
+  const { quoteId, lines, daysUntilDue = 30, memo, taxState } = request.data || {};
   const qsnap = await db.doc(`quotes/${quoteId}`).get();
   if (!qsnap.exists) throw new HttpsError("not-found", "Quote not found.");
   const q = qsnap.data();
@@ -1011,13 +1047,25 @@ exports.createInvoice = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (r
   for (const l of lines) {
     await stripe.invoiceItems.create({ customer: customer.id, currency: "usd", unit_amount: cents(Number(l.unitPrice)), quantity: Math.max(1, parseInt(l.quantity, 10) || 1), description: String(l.description || "Custom order").slice(0, 200) });
   }
-  const invoice = await stripe.invoices.create({ customer: customer.id, collection_method: "send_invoice", days_until_due: Math.max(1, parseInt(daysUntilDue, 10) || 30), description: memo ? String(memo).slice(0, 500) : `Kind Flames corporate order for ${q.company}`, metadata: { quoteId } });
+  const settings = await getSettings();
+  const st = String(taxState || "").toUpperCase().slice(0, 2);
+  const taxRateId = await stripeTaxRateId(stripe, st, settings.taxRates?.[st] || 0);
+  const invoice = await stripe.invoices.create({ customer: customer.id, collection_method: "send_invoice", ...(taxRateId ? { default_tax_rates: [taxRateId] } : {}), days_until_due: Math.max(1, parseInt(daysUntilDue, 10) || 30), description: memo ? String(memo).slice(0, 500) : `Kind Flames corporate order for ${q.company}`, metadata: { quoteId } });
   const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
   await stripe.invoices.sendInvoice(finalized.id);
-  await qsnap.ref.update({ status: "invoiced", stripeInvoiceId: finalized.id, invoiceUrl: finalized.hosted_invoice_url, invoiceTotal: finalized.total / 100, updatedAt: FieldValue.serverTimestamp() });
+  await qsnap.ref.update({ status: "invoiced", taxState: taxRateId ? st : null, stripeInvoiceId: finalized.id, invoiceUrl: finalized.hosted_invoice_url, invoiceTotal: finalized.total / 100, updatedAt: FieldValue.serverTimestamp() });
   return { ok: true, url: finalized.hosted_invoice_url, total: finalized.total / 100 };
 });
 
+
+/** Finds or creates the Stripe TaxRate for a US state's rate (exclusive). Returns its id, or null when rate is 0. */
+async function stripeTaxRateId(stripe, state, rate) {
+  if (!state || !(rate > 0)) return null;
+  const key = `${state}:${rate}`;
+  for await (const t of stripe.taxRates.list({ active: true, limit: 100 })) if (t.metadata?.kf === key) return t.id;
+  const t = await stripe.taxRates.create({ display_name: "Sales tax", percentage: round2(rate * 100 * 1000) / 1000, inclusive: false, country: "US", state, jurisdiction: state, description: `${state} sales tax`, metadata: { kf: key } });
+  return t.id;
+}
 
 /* ----------------------------- subscriptions ------------------------------ */
 const PLANS = {
@@ -1038,10 +1086,12 @@ exports.createSubscriptionCheckout = onCall({ cors: true, secrets: STRIPE_SECRET
   const email = String(data.email || request.auth.token.email || "").toLowerCase().slice(0, 200);
   if (!email) throw new HttpsError("invalid-argument", "Email is required.");
   const stripe = getStripe();
+  // Same state sales tax as one-off orders (settings.taxRates), charged on every renewal.
+  const taxRateId = await stripeTaxRateId(stripe, shippingAddress.state, settings.taxRates?.[shippingAddress.state] || 0);
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer_email: email,
-    line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: plan.amount, recurring: { interval: plan.interval, interval_count: plan.intervalCount }, product_data: { name: plan.name, description: plan.description } } }],
+    line_items: [{ quantity: 1, ...(taxRateId ? { tax_rates: [taxRateId] } : {}), price_data: { currency: "usd", unit_amount: plan.amount, recurring: { interval: plan.interval, interval_count: plan.intervalCount }, product_data: { name: plan.name, description: plan.description } } }],
     success_url: `${origin}/subscribe/thanks?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/subscribe?cancelled=1`,
     metadata: { uid, plan: plan.id, shippingAddress: JSON.stringify(shippingAddress), preference: String(data.preference || "").slice(0, 60) },
@@ -1116,14 +1166,21 @@ exports.syncSubscriptions = onCall({ cors: true, secrets: STRIPE_SECRETS }, asyn
 });
 
 /** Creates one fulfilment order per active subscription for the current billing period (idempotent). */
-exports.createSubscriptionShipments = onCall({ cors: true, secrets: MAIL_SECRETS }, async (request) => {
+exports.createSubscriptionShipments = onCall({ cors: true, secrets: STRIPE_SECRETS }, async (request) => {
   requireAdmin(request);
   const { picks } = request.data || {}; // { monthly: [{productId, variantId}], quarterly: [...] }
   const settings = await getSettings();
   const subs = await db.collection("subscriptions").where("status", "in", ["active", "trialing"]).get();
-  let created = 0, skipped = 0;
+  let created = 0, skipped = 0, inactive = 0;
+  const stripe = getStripe();
   for (const d of subs.docs) {
-    const sub = d.data();
+    let sub = d.data();
+    // The stored status can be stale (cancelled or past due since the last sync): ask Stripe before shipping.
+    try {
+      const live = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
+      sub = await upsertSubscriptionDoc(live);
+    } catch (e) { console.error("subscription status check failed", sub.stripeSubscriptionId, e.message); skipped++; continue; }
+    if (!["active", "trialing"].includes(sub.status)) { inactive++; continue; }
     const periodKey = `${sub.stripeSubscriptionId}:${sub.currentPeriodStart || "na"}`;
     const dup = await db.collection("orders").where("subscriptionPeriodKey", "==", periodKey).limit(1).get();
     if (!dup.empty) { skipped++; continue; }
@@ -1148,7 +1205,7 @@ exports.createSubscriptionShipments = onCall({ cors: true, secrets: MAIL_SECRETS
     if (order.email) await sendMail({ to: order.email, subject: `Your ${plan.name} box is being packed`, html: wrapEmail(`<h2>This period's box</h2><p>${lines.map((l) => esc(l.name) + " (" + esc(l.variantLabel) + ")").join(", ")} is on its way to you within 5 business days. Order ${number}.</p>`) }).catch(() => {});
   }
   void settings;
-  return { created, skipped };
+  return { created, skipped, inactive };
 });
 function publicSub(s) { const { stripeCustomerId, ...rest } = s; return { ...rest, createdAt: null, updatedAt: null }; }
 
@@ -1168,7 +1225,9 @@ exports.abandonedCartReminder = onSchedule({ schedule: "every day 15:00", timeZo
       if (!["unpaid", "expired", "not_found", "failed", "none"].includes(check.state)) continue;
     }
     if (await marketing.isUnsubscribed(o.email)) { await d.ref.update({ reminderSent: true }); continue; }
-    await sendMail({ to: o.email, subject: "Your Kind Flames bag is waiting", html: wrapEmail(`<h2>Still thinking it over?</h2><p>You left ${o.items.map((i) => esc(i.name)).join(", ")} in your bag. It's saved for you.</p><p><a href="${SITE_URL}/checkout">Finish checking out</a> — free shipping over $60.</p>`) }).catch(() => {});
+    const unsub = await marketing.unsubscribeFor(o.email).catch(() => null);
+    if (!unsub) continue; // no way to opt out = don't send (CAN-SPAM)
+    await sendMail({ to: o.email, subject: "Your Kind Flames bag is waiting", html: wrapEmail(`<h2>Still thinking it over?</h2><p>You left ${o.items.map((i) => esc(i.name)).join(", ")} in your bag. It's saved for you.</p><p><a href="${SITE_URL}/checkout">Finish checking out</a> — free shipping over $60.</p>${unsub.footer}`), headers: unsub.headers }).catch(() => {});
     await d.ref.update({ reminderSent: true });
     sent++;
   }
@@ -1199,7 +1258,7 @@ async function sendMail({ to, subject, html, text, headers }) {
 }
 const esc = integrity.esc;
 function wrapEmail(body) {
-  return `<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1E231D"><div style="background:#214238;color:#EAF2EC;padding:18px 24px;font-size:20px;font-weight:700">Kind Flames</div><div style="padding:24px;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5">${body}</div><div style="padding:16px 24px;font-size:12px;color:#6B7266;font-family:Helvetica,Arial,sans-serif">Shamyra Naturals LLC, d/b/a Kind Flames · hello@kindflames.com · (732) 666-8013</div></div>`;
+  return `<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1E231D"><div style="background:#214238;color:#EAF2EC;padding:18px 24px;font-size:20px;font-weight:700">Kind Flames</div><div style="padding:24px;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5">${body}</div><div style="padding:16px 24px;font-size:12px;color:#6B7266;font-family:Helvetica,Arial,sans-serif">Shamyra Naturals LLC, d/b/a Kind Flames${MAILING_ADDRESS ? " · " + esc(MAILING_ADDRESS) : ""} · hello@kindflames.com · (732) 666-8013</div></div>`;
 }
 function orderTable(order) {
   const rows = order.items.map((i) => `<tr><td style="padding:6px 0">${esc(i.name)} <span style="color:#6B7266">${esc(i.variantLabel)} × ${i.quantity}</span></td><td style="text-align:right">${fmt(i.price * i.quantity - (i.lineDiscount || 0))}</td></tr>`).join("");
@@ -1209,7 +1268,7 @@ function orderTable(order) {
 function addressBlock(a) { return `${esc(a.fullName)}<br>${esc(a.address)}${a.address2 ? "<br>" + esc(a.address2) : ""}<br>${esc(a.city)}, ${esc(a.state)} ${esc(a.zipCode)}`; }
 async function sendOrderConfirmation(order) {
   if (!order.email) return;
-  return sendMail({ to: order.email, subject: `Order ${order.number} confirmed — Kind Flames`, html: wrapEmail(`<h2>Thanks, ${esc(order.customerName.split(" ")[0])}. Your order is in.</h2><p>Order <b>${order.number}</b> is paid. We pack in 1–2 business days and will email you a tracking link when it ships.</p>${orderTable(order)}<p style="margin-top:16px"><b>Ships to</b><br>${addressBlock(order.shippingAddress)}</p>${order.gift?.isGift ? `<p><b>Gift message:</b> ${esc(order.gift.message)}</p>` : ""}<p><a href="${SITE_URL}/account">View your order</a></p>`) });
+  return sendMail({ to: order.email, subject: `Order ${order.number} confirmed — Kind Flames`, html: wrapEmail(`<h2>Thanks, ${esc(order.customerName.split(" ")[0])}. Your order is in.</h2><p>Order <b>${order.number}</b> is paid. We pack in 1–2 business days and will email you a tracking link when it ships.</p>${orderTable(order)}<p style="margin-top:16px"><b>Ships to</b><br>${addressBlock(order.shippingAddress)}</p>${order.gift?.isGift ? `<p><b>Gift message:</b> ${esc(order.gift.message)}</p>` : ""}<p><a href="${SITE_URL}/order-status?n=${encodeURIComponent(order.number)}">Check your order status</a> any time with this order number and your email.</p>`) });
 }
 async function sendOwnerNewOrder(order) {
   return sendMail({ to: OWNER_EMAIL, subject: `New order ${order.number} — ${fmt(order.total)} (${order.paymentMethod})`, html: wrapEmail(`<h2>New order ${order.number}</h2><p>${esc(order.customerName)} · ${esc(order.email)}</p>${orderTable(order)}<p><b>Ship to</b><br>${addressBlock(order.shippingAddress)}</p><p><a href="${SITE_URL}/admin/orders">Open in admin</a></p>`) });

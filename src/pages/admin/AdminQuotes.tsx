@@ -14,6 +14,7 @@ export default function AdminQuotes() {
   const [open, setOpen] = useState<Quote | null>(null);
   const [lines, setLines] = useState([{ description: '', unitPrice: 0, quantity: 25 }]);
   const [days, setDays] = useState(30);
+  const [taxState, setTaxState] = useState('NJ');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const load = () => listQuotes().then(setQuotes).catch(() => {});
@@ -21,7 +22,7 @@ export default function AdminQuotes() {
   const startInvoice = (q: Quote) => { setOpen(q); setLines([{ description: `${q.product} × ${q.quantity}${q.customization.length ? ` (${q.customization.join(', ')})` : ''}`, unitPrice: 0, quantity: q.quantity }]); };
   const send = async () => {
     if (!open) return; setBusy(true);
-    try { const r = await createInvoice({ quoteId: open.id, lines, daysUntilDue: days }); toast(`Invoice for ${money(r.total)} sent`); setOpen(null); load(); } catch (e) { toast(errorMessage(e)); } finally { setBusy(false); }
+    try { const r = await createInvoice({ quoteId: open.id, lines, daysUntilDue: days, taxState: taxState || undefined }); toast(`Invoice for ${money(r.total)} sent`); setOpen(null); load(); } catch (e) { toast(errorMessage(e)); } finally { setBusy(false); }
   };
   const total = lines.reduce((t, l) => t + Number(l.unitPrice) * Number(l.quantity), 0);
   const downloadCsv = (q: Quote) => { const rows = [['name', 'address', 'address2', 'city', 'state', 'zip', 'email', 'note'], ...(q.recipients || []).map((r) => [r.name, r.address, r.address2 || '', r.city, r.state, r.zipCode, r.email || '', r.note || ''])]; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')], { type: 'text/csv' })); a.download = `${slugify(q.company)}-recipients.csv`; a.click(); };
@@ -50,7 +51,7 @@ export default function AdminQuotes() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog"><div className="card w-full max-w-lg space-y-3 p-5"><h2 className="text-xl">Invoice · {open.company}</h2><p className="text-sm text-muted">Sent by Stripe to {open.email}. They can pay by card or bank transfer.</p>
           {lines.map((l, i) => <div key={i} className="grid grid-cols-[1fr_90px_70px] gap-2"><input className="input" placeholder="Description" value={l.description} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))} /><input className="input" type="number" step="0.01" placeholder="Unit $" value={l.unitPrice || ''} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, unitPrice: Number(e.target.value) } : x)))} /><input className="input" type="number" value={l.quantity} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, quantity: Number(e.target.value) } : x)))} /></div>)}
-          <div className="flex items-center gap-3"><Button size="sm" variant="ghost" onClick={() => setLines([...lines, { description: '', unitPrice: 0, quantity: 1 }])}>+ Line</Button><Field label="Due in days" className="w-28"><input className="input" type="number" value={days} onChange={(e) => setDays(Number(e.target.value))} /></Field><div className="flex-1 text-right font-bold">Total {money(total)}</div></div>
+          <div className="flex items-center gap-3"><Button size="sm" variant="ghost" onClick={() => setLines([...lines, { description: '', unitPrice: 0, quantity: 1 }])}>+ Line</Button><Field label="Due in days" className="w-28"><input className="input" type="number" value={days} onChange={(e) => setDays(Number(e.target.value))} /></Field><Field label="Sales tax" className="w-44"><select className="input" value={taxState} onChange={(e) => setTaxState(e.target.value)}><option value="NJ">NJ 6.625% (ships to NJ)</option><option value="">None (ships out of state)</option></select></Field><div className="flex-1 text-right font-bold">Total {money(total)}</div></div>
           <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setOpen(null)}>Cancel</Button><Button variant="accent" disabled={busy || total <= 0} onClick={send}>{busy ? 'Sending…' : 'Send invoice'}</Button></div></div></div>
       )}
     </div>

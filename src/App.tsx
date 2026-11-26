@@ -22,6 +22,7 @@ import Corporate from './pages/Corporate';
 import Gifts from './pages/Gifts';
 import Subscribe, { SubscribeThanks } from './pages/Subscribe';
 import NotFound from './pages/NotFound';
+import OrderStatus from './pages/OrderStatus';
 
 const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
 const Flyer = lazy(() => import('./pages/internal/prints/Flyer'));
@@ -64,6 +65,7 @@ function AppRoutes() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order-confirmation" element={<OrderConfirmation />} />
+        <Route path="/order-status" element={<OrderStatus />} />
         <Route path="/account" element={<Account />} />
         <Route path="/profile" element={<Navigate to="/account" replace />} />
         <Route path="/login" element={<Login />} />

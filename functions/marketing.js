@@ -3,7 +3,7 @@
  * 45-day reorder nudge, and one-click unsubscribe.
  *
  * State lives in Firestore `marketing/{email}` (server-written, admin-readable):
- *   { email, firstName, source: 'newsletter'|'order', token, unsubscribed, welcomeStage: 0..3,
+ *   { email, firstName, source: 'newsletter'|'order'|'checkout' (abandoned bag only; not synced to the audience), token, unsubscribed, welcomeStage: 0..3,
  *     welcomeAt, lastOrderAt, resend: { contactId, syncedAt }, createdAt, updatedAt }
  * Per-order flags on `orders/{id}`: shippedAt, careSent, reorderSent.
  * Resend audience id: env RESEND_AUDIENCE_ID, else created once and stored in `system/marketing`.
@@ -105,6 +105,7 @@ function createMarketing({ db, FieldValue, sendMail, wrapEmail, esc, fmt, getPro
     const patch = { updatedAt: now };
     if (firstName && !cur.firstName) patch.firstName = firstName;
     if (lastOrderAt) patch.lastOrderAt = lastOrderAt;
+    if (cur.source === "checkout" && source && source !== "checkout") patch.source = source; // became a buyer/subscriber
     if (Object.keys(patch).length > 1) await ref.update(patch);
     return { ...cur, ...patch, isNew: false };
   }
@@ -179,14 +180,14 @@ function createMarketing({ db, FieldValue, sendMail, wrapEmail, esc, fmt, getPro
     const c = await welcomeCode();
     return {
       subject: c ? `Welcome to Kind Flames — ${c.type === "percent" ? `${c.value}%` : fmt(c.value)} off inside` : "Welcome to Kind Flames",
-      html: `<h2>Welcome in.</h2><p>${greet(doc)}</p><p>Thanks for joining. We hand-pour small batches of soy candles in New Jersey, and make the body scrubs, lotions and bath salts that go with them. No dyes, cotton wicks, and scents built to fill a room without taking it over.</p>${codeLine(c)}<p>A good place to start:</p>${button(`${SITE_URL}/shop`, "Shop the collection")}<p>Or build your own spa set — one candle, two bath items, 15% off the lot: <a href="${SITE_URL}/build-a-set" style="color:#214238">Build a set</a>.</p>`,
+      html: `<h2>Welcome in.</h2><p>${greet(doc)}</p><p>Thanks for joining. We hand-pour small batches of coconut-soy candles in New Jersey, and make the body scrubs, lotions and bath salts that go with them. No dyes, cotton and wood wicks, and scents built to fill a room without taking it over.</p>${codeLine(c)}<p>A good place to start:</p>${button(`${SITE_URL}/shop`, "Shop the collection")}<p>Or build your own spa set — one candle, two bath items, 15% off the lot: <a href="${SITE_URL}/build-a-set" style="color:#214238">Build a set</a>.</p>`,
     };
   }
   async function welcome2(doc) {
     const ps = await bestsellers(3);
     return {
       subject: "How a Kind Flames candle gets made",
-      html: `<h2>Slow wax, patient wicks.</h2><p>${greet(doc)}</p><p>Every candle starts as a pot of soy wax warmed to the same temperature, every time. Fragrance goes in at the moment the wax will hold it, then it's poured by hand and left alone for two weeks so the scent settles into the wax instead of sitting on top. That cure is why the first burn smells like the twentieth.</p><p>The ones people come back for:</p>${productList(ps)}${button(`${SITE_URL}/shop`, "See all scents")}<p style="color:#6B7266;font-size:13px">Burn tip: let the first burn go until the melt pool reaches the edge of the jar. It stops tunnelling for the life of the candle.</p>`,
+      html: `<h2>Slow wax, patient wicks.</h2><p>${greet(doc)}</p><p>Every candle starts as a pot of coconut-soy wax warmed to the same temperature, every time. Fragrance goes in at the moment the wax will hold it, then it's poured by hand and left alone for two weeks so the scent settles into the wax instead of sitting on top. That cure is why the first burn smells like the twentieth.</p><p>The ones people come back for:</p>${productList(ps)}${button(`${SITE_URL}/shop`, "See all scents")}<p style="color:#6B7266;font-size:13px">Burn tip: let the first burn go until the melt pool reaches the edge of the jar. It stops tunnelling for the life of the candle.</p>`,
     };
   }
   async function welcome3(doc) {
@@ -228,6 +229,15 @@ function createMarketing({ db, FieldValue, sendMail, wrapEmail, esc, fmt, getPro
       subject: "Running low?",
       html: `<h2>About six weeks in.</h2><p>${greet(doc)}</p><p>That's roughly when a Kind Flames candle burns its last hour and a scrub jar scrapes the bottom. If you're there, here's what you ordered last time:</p><ul style="padding-left:18px">${items.map((i) => `<li style="margin:4px 0">${productLink(i.productId, i.name)} <span style="color:#6B7266">${esc(i.variantLabel || "")}</span></li>`).join("")}</ul>${button(`${SITE_URL}/shop`, "Reorder")}${hasCandle ? `<p>Or never run out: <a href="${SITE_URL}/subscribe" style="color:#214238">Candle of the Month</a> lands on your doorstep with free shipping, and you can pause any time.</p>` : ""}<p style="color:#6B7266;font-size:13px">Free shipping on orders over $60.</p>`,
     };
+  }
+
+  /** Unsubscribe footer + List-Unsubscribe headers for a transactional-adjacent email (e.g. abandoned bag).
+   *  Creates a contact doc (no welcome series) so the link works. Returns null when the address is unsubscribed. */
+  async function unsubscribeFor(email) {
+    const doc = await upsertContact({ email, source: "checkout" }); // "checkout" contacts never join the marketing audience
+    if (!doc || doc.unsubscribed) return null;
+    const url = unsubscribeUrl(doc);
+    return { footer: footer(doc), headers: { "List-Unsubscribe": `<${url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } };
   }
 
   /* --------------------------------- sending --------------------------------- */
@@ -336,7 +346,7 @@ function createMarketing({ db, FieldValue, sendMail, wrapEmail, esc, fmt, getPro
     const all = await db.collection("marketing").get();
     result.contacts = all.size;
     if (result.audienceId) {
-      for (const d of all.docs) { const id = await syncContactToResend({ id: d.id, ...d.data() }, result.audienceId); if (id) result.synced++; else result.failed++; }
+      for (const d of all.docs.filter((x) => x.data().source !== "checkout")) { const id = await syncContactToResend({ id: d.id, ...d.data() }, result.audienceId); if (id) result.synced++; else result.failed++; }
     }
     return result;
   }
@@ -357,7 +367,7 @@ function createMarketing({ db, FieldValue, sendMail, wrapEmail, esc, fmt, getPro
 
   async function isUnsubscribed(email) { const s = await docRef(email).get(); return s.exists && s.data().unsubscribed === true; }
 
-  return { onNewsletterSignup, onOrderPaid, runDrip, handleUnsubscribe, syncAudience, sendTestEmails, isUnsubscribed, upsertContact };
+  return { onNewsletterSignup, onOrderPaid, runDrip, handleUnsubscribe, syncAudience, sendTestEmails, isUnsubscribed, upsertContact, unsubscribeFor };
 }
 
 module.exports = { createMarketing, welcomeStepDue, orderActionsDue, TIMING, DAY };

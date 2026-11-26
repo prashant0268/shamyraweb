@@ -70,7 +70,7 @@ export default function OrderConfirmation() {
       </div>
       <div className="card mt-4 p-5 text-sm"><b>What happens next.</b> We pack in 1–2 business days and email a tracking link when it ships. Candles ship upright in molded pulp; liquids are sealed and bagged.</div>
       <div className="mt-6 flex flex-wrap justify-center gap-3"><Button to="/account">View your orders</Button><Button variant="ghost" to="/shop">Keep shopping</Button></div>
-      {user?.isAnonymous && <p className="mt-4 text-center text-sm text-muted"><Link to="/register" className="underline">Create an account</Link> to keep this order in your history.</p>}
+      {user?.isAnonymous && <p className="mt-4 text-center text-sm text-muted"><Link to="/register" className="underline">Create an account</Link> to keep this order in your history, or check it any time on <Link to={`/order-status?n=${encodeURIComponent(o.number)}`} className="underline">Order status</Link>.</p>}
     </div>
   );
 }

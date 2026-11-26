@@ -20,17 +20,19 @@ export const updateOrderStatus = call<{ orderId: string; status: string; trackin
 export const refundOrder = call<{ orderId: string; amount?: number; reason?: string; restock?: boolean }, { ok: boolean; amount: number; refundedTotal: number; full: boolean; restocked: boolean; emailed: boolean }>('refundOrder');
 export const deleteOrder = call<{ orderId: string }, { ok: boolean }>('deleteOrder');
 export const submitQuote = call<Record<string, unknown>, { ok: boolean; id: string; mailed?: boolean }>('submitQuote');
+export interface OrderLookup { number: string; status: string; paymentStatus: string; createdAt: number | null; paidAt: number | null; items: { name: string; variantLabel: string; quantity: number; image: string }[]; total: number; refundedTotal: number; shipTo: { city: string; state: string } | null; tracking: { carrier: string; number: string; url: string } | null }
+export const lookupOrder = call<{ number: string; email: string }, OrderLookup>('lookupOrder');
 export type NewsletterSource = 'popup' | 'footer' | 'home' | 'checkout' | 'other';
 export const subscribeNewsletter = call<{ email: string; source: NewsletterSource }, { ok: boolean }>('subscribeNewsletter');
 export const requestBackInStock = call<{ productId: string; variantId: string; email: string }, { ok: boolean }>('requestBackInStock');
-export const createInvoice = call<{ quoteId: string; lines: { description: string; unitPrice: number; quantity: number }[]; daysUntilDue?: number; memo?: string }, { ok: boolean; url: string; total: number }>('createInvoice');
+export const createInvoice = call<{ quoteId: string; lines: { description: string; unitPrice: number; quantity: number }[]; daysUntilDue?: number; memo?: string; taxState?: string }, { ok: boolean; url: string; total: number }>('createInvoice');
 
 export const listPlans = call<Record<string, never>, { plans: Plan[] }>('listPlans');
 export const createSubscriptionCheckout = call<{ plan: string; shippingAddress: ShippingAddress; email: string; preference?: string; origin: string }, { url: string }>('createSubscriptionCheckout');
 export const verifySubscription = call<{ sessionId: string }, { active: boolean; status?: string; subscription?: Subscription }>('verifySubscription');
 export const createPortalSession = call<{ origin: string }, { url: string }>('createPortalSession');
 export const syncSubscriptions = call<Record<string, never>, { synced: number }>('syncSubscriptions');
-export const createSubscriptionShipments = call<{ picks: Record<string, { productId: string; variantId: string }[]> }, { created: number; skipped: number }>('createSubscriptionShipments');
+export const createSubscriptionShipments = call<{ picks: Record<string, { productId: string; variantId: string }[]> }, { created: number; skipped: number; inactive?: number }>('createSubscriptionShipments');
 
 export const errorMessage = (e: unknown, fallback = 'Something went wrong. Please try again.') => {
   const err = e as { message?: string; code?: string };
