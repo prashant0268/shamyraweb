@@ -11,10 +11,10 @@
 3. **Admin access:** sign in on the site with `prashant0268@gmail.com` (Google or email). The `ensureAdmin` function grants the admin claim to emails listed in `functions/.env` → `ADMIN_EMAILS`. Then open `/admin`.
 4. **Seed the catalog:** Admin → Products → “Import default catalog to Firestore”. Until you do, the store serves the built-in catalog (read-only).
 5. **Stripe (optional, when ready):** activate the Stripe account, set the live secret in Secret Manager (`firebase functions:secrets:set STRIPE_SECRET_KEY`), add `VITE_STRIPE_PUBLIC_KEY_LIVE` is NOT needed (we use Stripe Checkout, server-side only). Then Admin → Settings → “Card payments enabled”.
-   - Webhook (recommended): create an endpoint in Stripe for `checkout.session.completed` → `https://us-central1-shamyra-web.cloudfunctions.net/stripeWebhook`, store its signing secret as `STRIPE_WEBHOOK_SECRET`, set `"stripeWebhook": true` in `functions/features.json`, redeploy functions. Without it, orders are still verified server-side when the customer lands on the confirmation page.
+   - Webhook (recommended): see "Payment security fixes (2026-11-24)" below for the exact steps.
 6. ~~Transactional email~~ **Done 2026-10-15** — Resend enabled (`functions/features.json` → `"resend": true`, domain kindflames.com verified). Emails send from orders@kindflames.com, reply-to hello@kindflames.com.
 7. **Discount code:** create `WELCOME10` (10%, first order only) in Admin → Discounts; the homepage newsletter promises it.
-8. **PayPal live:** already configured via secrets `PAYPAL_*` and `PAYPAL_MODE=live`. Sandbox is used automatically on localhost.
+8. **PayPal live:** configured via the `PAYPAL_*_LIVE` secrets. Production always uses live PayPal and the test project always uses sandbox (`IS_PRODUCTION`); `PAYPAL_MODE` is no longer used. Production no longer accepts checkouts from localhost.
 
 ## Daily use
 - Orders: Admin → Orders. “Mark fulfilled” → “Mark shipped” (enter tracking; customer gets an email) → “Mark delivered”. Refunds go back through Stripe/PayPal.
@@ -31,7 +31,7 @@
 - Test records: delete quote requests from Admin → Corporate quotes (Delete link under each row) and unpaid/cancelled orders from the order detail page ("Delete unpaid order"). Paid orders can only be refunded or cancelled, never deleted.
 
 ## Tests
-- `npm test` — 20 unit tests for server pricing (discounts, bundles, tax, shipping, stock).
+- `npm test` — unit tests for server pricing (discounts, bundles, tax, shipping, stock), marketing, and payments (PayPal environment selection, allowed origins, capture validation, Stripe session states).
 - `npm run test:emulator` — same scenarios through the real Cloud Functions runtime + Firestore emulator (needs Java).
 - Your global `firebase-tools` is 14.5; the functions emulator needs 15.x for firebase-functions v7 (`npm i -g firebase-tools@latest`). Deploys work on either.
 
@@ -69,3 +69,21 @@ Where things live: `functions/marketing.js` (templates and timing; the `TIMING` 
 2. Admin → Newsletter → **Sync to Resend audience** once. This imports past subscribers and customers as contacts and creates the “Kind Flames customers” audience in Resend (id stored server-side). New signups and buyers are added automatically from now on. Use Resend → Broadcasts for one-off campaigns to that audience.
 3. Create `WELCOME10` in Admin → Discounts if you haven't; the welcome email checks for it and leaves the code out when missing.
 
+
+## Payment security fixes (2026-11-24)
+What changed in the functions (details in `docs/ENVIRONMENTS.md` → "How the code decides" and "Payment webhooks and reconciliation"):
+- PayPal live vs sandbox now follows `IS_PRODUCTION` only (never the browser's origin) and is stored on each order as `paypalEnv`; production refuses localhost origins. This closes the hole where a production order could be "paid" with a PayPal sandbox buyer.
+- PayPal orders are marked paid only when the capture is `COMPLETED` for exactly the order total in USD. Pending captures stay pending and email you; mismatches are flagged (`paymentReview`) and email you.
+- The card-payments switch can no longer be bypassed by sending the `*.web.app` origin.
+- New scheduled function `reconcilePendingPayments` (every 30 min) asks Stripe/PayPal about pending orders and marks paid ones paid. The abandoned-bag email and "Delete unpaid order" check with the provider first.
+
+Your steps, in order:
+1. **Check for past abuse** (read-only): `npx -y firebase-tools@15 emulators:exec --project prod --only functions "node functions/scripts/audit-paypal-origins.mjs"`. Look up each listed capture id in live PayPal → Activity; no live payment means the order was never paid.
+2. **Live Stripe webhook** (once card payments are on, or now):
+   - Stripe (live) → Developers → Webhooks → Add endpoint `https://us-central1-shamyra-web.cloudfunctions.net/stripeWebhook`
+   - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `charge.refunded`, `charge.dispute.created`
+   - Secret: `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET -P prod` (the endpoint's `whsec_…`)
+   - Flag: set `"stripeWebhook": true` in `functions/features.shamyra-web.json` (committed as `false`), commit, `firebase deploy -P prod --only functions`.
+   - On the test project, add the four new events to the existing sandbox endpoint (same secret).
+3. **PayPal webhook** (optional; try on test first): PayPal app → Add webhook `https://us-central1-shamyra-web.cloudfunctions.net/paypalWebhook` with Payment capture completed / denied / refunded; `firebase functions:secrets:set PAYPAL_WEBHOOK_ID -P prod` with the Webhook ID; set `"paypalWebhook": true` in `functions/features.shamyra-web.json`; deploy functions.
+4. Optional cleanup: the `PAYPAL_MODE` secret is no longer bound and can be deleted (`firebase functions:secrets:destroy PAYPAL_MODE -P prod`, same for `-P test`).

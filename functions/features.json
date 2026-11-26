@@ -1,4 +1,5 @@
 {
   "resend": true,
-  "stripeWebhook": false
+  "stripeWebhook": false,
+  "paypalWebhook": false
 }
