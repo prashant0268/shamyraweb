@@ -121,7 +121,7 @@ export default function ProductDetail() {
           </div>
 
           {hasNotes && (
-            <div className="grid grid-cols-3 gap-2">{(['top', 'heart', 'base'] as const).map((k) => <div key={k} className="rounded-card border border-line bg-surface p-3"><div className="eyebrow">{product.category === 'set' ? (['Candle', 'Soak / Scrub', 'Lotion / Extra'][['top', 'heart', 'base'].indexOf(k)] || '') : k}</div><div className="mt-0.5 text-sm font-semibold">{product.notes![k]}</div></div>)}</div>
+            <div className="grid grid-cols-3 gap-2">{(['top', 'heart', 'base'] as const).map((k) => <div key={k} className="rounded-card border border-line bg-surface p-3"><div className="eyebrow">{product.category === 'set' ? (['Candle', 'Soak / Scrub', 'Extra'][['top', 'heart', 'base'].indexOf(k)] || '') : k}</div><div className="mt-0.5 text-sm font-semibold">{product.notes![k]}</div></div>)}</div>
           )}
           <p className="text-muted">{product.description}</p>
           {bundle && bundle.length > 0 && <div className="text-sm"><span className="font-bold">Includes:</span> {bundle.map((b) => <Link key={b!.id} to={`/product/${b!.slug}`} className="ml-1 text-pine underline">{b!.name}</Link>)}</div>}
@@ -170,7 +170,7 @@ export default function ProductDetail() {
       {FAMILY_IMAGES[product.family] && product.category !== 'set' && (
         <section className="mt-14 grid items-center gap-6 overflow-hidden rounded-img border border-line bg-surface lg:grid-cols-2">
           <img src={FAMILY_IMAGES[product.family]} alt="" className="h-64 w-full object-cover lg:h-full" loading="lazy" />
-          <div className="p-6 sm:p-10"><div className="eyebrow">The {product.family.toLowerCase()} family</div><h2 className="mt-2 text-2xl sm:text-3xl">Smells like: {product.tagline?.toLowerCase() || product.family.toLowerCase()}.</h2>{hasNotes && <p className="mt-3 text-muted">Opens with {product.notes!.top.toLowerCase()}, settles into {product.notes!.heart.toLowerCase()}, and finishes on {product.notes!.base.toLowerCase()}.</p>}<p className="mt-3 text-muted">{product.category === 'candle' ? 'Pair it with a scrub, lotion or soak from the same family and the whole evening matches.' : 'Light the matching candle and the whole evening matches.'}</p><div className="mt-5"><Button variant="ghost" to={`/shop?family=${encodeURIComponent(product.family)}`}>Everything {product.family.toLowerCase()}</Button></div></div>
+          <div className="p-6 sm:p-10"><div className="eyebrow">The {product.family.toLowerCase()} family</div><h2 className="mt-2 text-2xl sm:text-3xl">Smells like: {product.tagline?.toLowerCase() || product.family.toLowerCase()}.</h2>{hasNotes && <p className="mt-3 text-muted">Opens with {product.notes!.top.toLowerCase()}, settles into {product.notes!.heart.toLowerCase()}, and finishes on {product.notes!.base.toLowerCase()}.</p>}<p className="mt-3 text-muted">{product.category === 'candle' ? 'Pair it with a scrub or soak from the same family and the whole evening matches.' : 'Light the matching candle and the whole evening matches.'}</p><div className="mt-5"><Button variant="ghost" to={`/shop?family=${encodeURIComponent(product.family)}`}>Everything {product.family.toLowerCase()}</Button></div></div>
         </section>
       )}
 

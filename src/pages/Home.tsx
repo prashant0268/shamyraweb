@@ -20,7 +20,6 @@ import type { Review } from '../types';
 const TILES: { to: string; label: string; sub: string; img: string }[] = [
   { to: '/shop/candle', label: 'Candles', sub: 'Coconut-soy · 4, 8, 12 oz', img: IMG.catCandles },
   { to: '/shop/scrub', label: 'Body Scrubs', sub: 'Sugar & coffee', img: IMG.catScrubs },
-  { to: '/shop/lotion', label: 'Lotions', sub: 'Hand & body', img: IMG.catLotions },
   { to: '/shop/salt', label: 'Bath Salts', sub: 'Epsom & pink salt', img: IMG.catSalts },
   { to: '/shop/set', label: 'Gift Sets', sub: 'Boxed & ready', img: IMG.catSets },
 ];
@@ -28,7 +27,7 @@ const SCENES = [
   { img: IMG.sceneBedside, title: 'Bedside', sub: 'Lavender Dreams, lights low', to: '/shop?family=Floral' },
   { img: IMG.sceneTable, title: 'Dinner table', sub: 'Vanilla Bliss, unscented between courses', to: '/shop?family=Gourmand' },
   { img: IMG.bath, title: 'The bath', sub: 'Eucalyptus soak, Ocean Breeze lit', to: '/shop?family=Fresh' },
-  { img: IMG.sceneWindow, title: 'Sunday morning', sub: 'Oat & honey lotion, Beeswax Classic', to: '/shop?family=Honey' },
+  { img: IMG.sceneWindow, title: 'Sunday morning', sub: 'Beeswax Classic, coffee scrub', to: '/shop?family=Honey' },
   { img: IMG.holiday, title: 'The holidays', sub: 'Cinnamon Spice, Pine Forest', to: '/shop?family=Spiced' },
 ];
 
@@ -70,7 +69,7 @@ export default function Home() {
         <div className="wrap relative flex min-h-[70vh] flex-col justify-end gap-5 py-14 sm:min-h-[76vh] sm:justify-center">
           <div className="eyebrow !text-white/80">Hand-poured in New Jersey · Coconut-soy · Phthalate-free</div>
           <h1 className="max-w-[14ch] text-4xl sm:text-6xl lg:text-7xl">Light the room. Then run the bath.</h1>
-          <p className="max-w-[38ch] text-lg text-white/85 sm:text-xl">Small-batch candles and the bath &amp; body to go with them. Scents built to pair, so a candle, a soak and a lotion feel like one evening.</p>
+          <p className="max-w-[38ch] text-lg text-white/85 sm:text-xl">Small-batch candles and the bath &amp; body to go with them. Scents built to pair, so a candle, a soak and a scrub feel like one evening.</p>
           <div className="flex flex-wrap gap-3"><Button variant="accent" size="lg" to="/shop/candle">Shop candles</Button><Button variant="inverse" size="lg" to="/build-a-set">Build a spa set</Button></div>
           <div className="nav-link text-xs !font-medium text-white/75">Free US shipping over ${settings.freeShippingThreshold} · Ships in 1–2 business days · 30-day scent swap</div>
         </div>
@@ -79,7 +78,7 @@ export default function Home() {
       {/* Categories */}
       <section className="wrap py-12 sm:py-16">
         <SectionHead eyebrow="Shop by category" title="Five ways in" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
           {TILES.map((t) => (
             <Link key={t.to} to={t.to} className="group relative block aspect-[4/5] overflow-hidden rounded-img bg-surface-2">
               <img src={unsplashAt(t.img, 600)} srcSet={unsplashSrcSet(t.img, CARD_WIDTHS)} sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 20vw" alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" fetchPriority="low" />

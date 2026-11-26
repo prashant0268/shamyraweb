@@ -180,7 +180,7 @@ function createMarketing({ db, FieldValue, sendMail, wrapEmail, esc, fmt, getPro
     const c = await welcomeCode();
     return {
       subject: c ? `Welcome to Kind Flames — ${c.type === "percent" ? `${c.value}%` : fmt(c.value)} off inside` : "Welcome to Kind Flames",
-      html: `<h2>Welcome in.</h2><p>${greet(doc)}</p><p>Thanks for joining. We hand-pour small batches of coconut-soy candles in New Jersey, and make the body scrubs, lotions and bath salts that go with them. No dyes, cotton and wood wicks, and scents built to fill a room without taking it over.</p>${codeLine(c)}<p>A good place to start:</p>${button(`${SITE_URL}/shop`, "Shop the collection")}<p>Or build your own spa set — one candle, two bath items, 15% off the lot: <a href="${SITE_URL}/build-a-set" style="color:#214238">Build a set</a>.</p>`,
+      html: `<h2>Welcome in.</h2><p>${greet(doc)}</p><p>Thanks for joining. We hand-pour small batches of coconut-soy candles in New Jersey, and make the body scrubs and bath salts that go with them. No dyes, cotton and wood wicks, and scents built to fill a room without taking it over.</p>${codeLine(c)}<p>A good place to start:</p>${button(`${SITE_URL}/shop`, "Shop the collection")}<p>Or build your own spa set — one candle, two bath items, 15% off the lot: <a href="${SITE_URL}/build-a-set" style="color:#214238">Build a set</a>.</p>`,
     };
   }
   async function welcome2(doc) {

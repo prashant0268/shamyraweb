@@ -37,7 +37,7 @@ export default function Footer() {
             <p className="mt-1.5 text-xs text-muted">One email a week at most. Unsubscribe with one click.</p>
           </form>
         </div>
-        {col('Shop', [['/shop/candle', 'Candles'], ['/shop/scrub', 'Body Scrubs'], ['/shop/lotion', 'Lotions'], ['/shop/salt', 'Bath Salts'], ['/shop/set', 'Gift Sets'], ['/gifts', 'Holiday Gift Guide'], ['/build-a-set', 'Build a Spa Set'], ['/subscribe', 'Candle of the Month']])}
+        {col('Shop', [['/shop/candle', 'Candles'], ['/shop/scrub', 'Body Scrubs'], ['/shop/salt', 'Bath Salts'], ['/shop/set', 'Gift Sets'], ['/gifts', 'Holiday Gift Guide'], ['/build-a-set', 'Build a Spa Set'], ['/subscribe', 'Candle of the Month']])}
         {col('Company', [['/about', 'Our story'], ['/corporate', 'Corporate gifting'], ['/contact', 'Contact'], ['/faq', 'FAQ']])}
         {col('Help', [['/shipping-returns', 'Shipping & Returns'], ['/candle-care', 'Candle Care & Safety'], ['/account', 'Your account'], ['/privacy', 'Privacy Policy'], ['/terms', 'Terms of Service']])}
         <div>

@@ -7,7 +7,9 @@ class PricingError extends Error { constructor(code, message) { super(message); 
 const fail = (code, message) => { throw new PricingError(code, message); };
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const cents = (n) => Math.round(n * 100);
-const BODY_CATEGORIES = ["scrub", "lotion", "salt"];
+const BODY_CATEGORIES = ["scrub", "salt"];
+// Categories the store still sells. Products in a retired category (lotion) can stay in Firestore but cannot be bought.
+const SELLABLE_CATEGORIES = ["candle", "scrub", "salt", "set"];
 const { discountHasCapacity, normalizeEmail } = require("./integrity");
 
 /* -------------------------------- catalog -------------------------------- */
@@ -27,7 +29,7 @@ async function priceCart({ items, discountCode, shippingAddress, shippingMethod,
     if (!Number.isInteger(qty) || qty < 1 || qty > 20) fail("invalid-argument", "Invalid quantity.");
     const product = await getProduct(String(item.productId));
     const demoOff = settings?.showDemoProducts === false && product?.status !== "active";
-    if (!product || product.active === false || demoOff) fail("failed-precondition", `"${product?.name || item.productId}" is no longer available.`);
+    if (!product || product.active === false || demoOff || !SELLABLE_CATEGORIES.includes(product.category)) fail("failed-precondition", `"${product?.name || item.productId}" is no longer available.`);
     const variant = (product.variants || []).find((v) => v.id === item.variantId) || product.variants?.[0];
     if (!variant) fail("failed-precondition", `${product.name} has no purchasable option.`);
     if (typeof variant.stock === "number" && variant.stock < qty) {

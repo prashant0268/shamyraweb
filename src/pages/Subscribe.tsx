@@ -12,7 +12,7 @@ import { Alert, Field } from '../components/ui/Bits';
 import type { Plan, ShippingAddress } from '../types';
 
 const STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'];
-const FALLBACK: Plan[] = [{ id: 'monthly', name: 'Candle of the Month', amount: 2400, interval: 'month', intervalCount: 1, description: 'One 8 oz candle in a new scent every month, free shipping.' }, { id: 'quarterly', name: 'Seasonal Spa Box', amount: 6900, interval: 'month', intervalCount: 3, description: 'A candle, a bath soak and a lotion every season, free shipping.' }];
+const FALLBACK: Plan[] = [{ id: 'monthly', name: 'Candle of the Month', amount: 2400, interval: 'month', intervalCount: 1, description: 'One 8 oz candle in a new scent every month, free shipping.' }, { id: 'quarterly', name: 'Seasonal Spa Box', amount: 6900, interval: 'month', intervalCount: 3, description: 'A candle, a bath soak and a body scrub every season, free shipping.' }];
 
 export function SubscribeThanks() {
   useSeo({ title: 'Subscription confirmed', noindex: true });

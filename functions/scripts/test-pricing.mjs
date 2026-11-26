@@ -16,10 +16,10 @@ p = await call({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quant
 check('free shipping ≥60', [p.subtotal, p.shipping.amount, p.tax, p.total], [74.97, 0, 4.97, 79.94]);
 p = await call({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 1 }], shippingAddress: { ...NJ, state: 'NY' } });
 check('no tax out of state', [p.tax, p.total], [0, 31.94]);
-p = await call({ items: [{ productId: 'eucalyptus-mint', variantId: '8oz', quantity: 1, bundle: 'b1' }, { productId: 'eucalyptus-recovery-soak', variantId: '12oz', quantity: 1, bundle: 'b1' }, { productId: 'oat-honey-hand-lotion', variantId: '8oz', quantity: 1, bundle: 'b1' }], shippingAddress: NJ });
-check('spa-set bundle 15%', [p.subtotal, p.bundleDiscount, p.shipping.amount, p.tax, p.total], [54.99, 8.25, 6.95, 3.56, 57.25]);
-p = await call({ items: [{ productId: 'eucalyptus-mint', variantId: '8oz', quantity: 1, bundle: 'b2' }, { productId: 'oat-honey-hand-lotion', variantId: '8oz', quantity: 1, bundle: 'b2' }], shippingAddress: NJ });
-check('incomplete bundle → no discount', [p.bundleDiscount, p.subtotal], [0, 40.99]);
+p = await call({ items: [{ productId: 'eucalyptus-mint', variantId: '8oz', quantity: 1, bundle: 'b1' }, { productId: 'eucalyptus-recovery-soak', variantId: '12oz', quantity: 1, bundle: 'b1' }, { productId: 'brown-sugar-vanilla-scrub', variantId: '8oz', quantity: 1, bundle: 'b1' }], shippingAddress: NJ });
+check('spa-set bundle 15%', [p.subtotal, p.bundleDiscount, p.shipping.amount, p.tax, p.total], [56.99, 8.55, 6.95, 3.67, 59.06]);
+p = await call({ items: [{ productId: 'eucalyptus-mint', variantId: '8oz', quantity: 1, bundle: 'b2' }, { productId: 'brown-sugar-vanilla-scrub', variantId: '8oz', quantity: 1, bundle: 'b2' }], shippingAddress: NJ });
+check('incomplete bundle → no discount', [p.bundleDiscount, p.subtotal], [0, 42.99]);
 p = await call({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 1 }], shippingAddress: NJ, discountCode: 'welcome10' });
 check('WELCOME10', [p.discount.code, p.discount.amount, p.total], ['WELCOME10', 2.5, 31.39]);
 p = await call({ items: [{ productId: 'spa-night-set', variantId: 'set', quantity: 1 }, { productId: 'lavender-dreams', variantId: '8oz', quantity: 1 }], shippingAddress: NJ, discountCode: 'SETS5' });

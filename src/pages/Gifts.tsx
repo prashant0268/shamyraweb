@@ -26,13 +26,13 @@ type Rail = { key: string; eyebrow: string; title: string; blurb: string; to: st
 const RAILS: Rail[] = [
   { key: 'under25', eyebrow: 'Stocking stuffers', title: `Under $${RAIL_MAX_BUDGET}`, blurb: 'Teachers, neighbors, the gift exchange at work. Small formats that still smell like the real thing.', to: `/shop?max=${RAIL_MAX_BUDGET}`, cta: `All under $${RAIL_MAX_BUDGET}` },
   { key: 'under50', eyebrow: 'A proper present', title: `Under $${RAIL_MID_BUDGET}`, blurb: 'The big candle, the full-size scrub, the soak that lasts all winter.', to: `/shop?max=${RAIL_MID_BUDGET}`, cta: `All under $${RAIL_MID_BUDGET}` },
-  { key: 'sets', eyebrow: 'The whole evening', title: 'Spa night sets', blurb: 'Candle, soak and lotion in one box, matched by scent, ready to hand over.', to: '/shop/set', cta: 'All gift sets' },
+  { key: 'sets', eyebrow: 'The whole evening', title: 'Spa night sets', blurb: 'Candle, soak and scrub in one box, matched by scent, ready to hand over.', to: '/shop/set', cta: 'All gift sets' },
 ];
 
 /** Recipient tiles. `productId` picks the background photo from the catalog (falls back to a solid color). */
 const RECIPIENTS: { to: string; label: string; sub: string; productId: string; bg: string }[] = [
   { to: '/shop/candle', label: 'For the host', sub: 'A 12 oz candle they’ll light the same night.', productId: 'pine-forest', bg: '#214238' },
-  { to: `/shop?max=${RAIL_MAX_BUDGET}`, label: 'For the coworker', sub: 'Under $25, no awkwardness.', productId: 'oat-honey-hand-lotion', bg: '#7A6A42' },
+  { to: `/shop?max=${RAIL_MAX_BUDGET}`, label: 'For the coworker', sub: 'Under $25, no awkwardness.', productId: 'rose-pink-salt-soak', bg: '#7A6A42' },
   { to: '/build-a-set', label: 'For the one who needs a night off', sub: 'Candle + soak + scrub, 15% off as a set.', productId: 'spa-night-set', bg: '#2E5A4B' },
   { to: '/corporate', label: 'For the office', sub: 'Logo labels, 25 units and up, one invoice.', productId: 'cozy-evening-trio', bg: '#8A4B2E' },
 ];

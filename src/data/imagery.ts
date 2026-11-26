@@ -16,7 +16,6 @@ export const IMG = {
   // Category tiles
   catCandles: u('1572726729207-a78d6feb18d7', 900),      // two amber glass jars
   catScrubs: u('1683944433023-027a3f443ae4', 900),       // jars of scrub on a table
-  catLotions: u('1619451427882-6aaaded0cc61', 900),      // hands with lotion from a pump
   catSalts: u('1550623685-2227f7bbef18', 900),           // white salt in a glass jar
   catSets: u('1759563871375-d5b140f6646e', 900),         // white gift box, ribbon and wax seal
   // Scent families (ingredient / mood shots)
@@ -64,8 +63,6 @@ export const PRODUCT_PLACEHOLDERS: Record<string, [string, string]> = {
   'pumpkin-spice': P('1602607203588-d6d0eda790e3', '1696426678240-3e4700dd9487'),
   'brown-sugar-vanilla-scrub': P('1667803552102-00de1188d66f', '1667803546535-81f5b1c4dbfb'),
   'coffee-coconut-scrub': P('1683944433023-027a3f443ae4', '1667803597410-f7876c2536c9'),
-  'oat-honey-hand-lotion': P('1597931752949-98c74b5b159f', '1619451427882-6aaaded0cc61'),
-  'lavender-body-lotion': P('1643716991841-91851103e69f', '1643716991736-b83d4bf474b4'),
   'eucalyptus-recovery-soak': P('1550623685-2227f7bbef18', '1584683596603-61fbfa842a47'),
   'rose-pink-salt-soak': P('1548110579-526dc051a76b', '1550407665-942ceef4bf37'),
   'spa-night-set': P('1760804876257-f073f77f2bcf', '1700918232124-f64da19e73eb'),

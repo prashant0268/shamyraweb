@@ -19,10 +19,10 @@ p = await q({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity
 check('free shipping ≥60', [p.subtotal, p.shipping.amount, p.tax, p.total], [74.97, 0, 4.97, 79.94]);
 p = await q({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 1 }], shippingAddress: { state: 'NY' } });
 check('no tax out of state', [p.tax, p.total], [0, 31.94]);
-p = await q({ items: [{ productId: 'eucalyptus-mint', variantId: '8oz', quantity: 1, bundle: 'b1' }, { productId: 'eucalyptus-recovery-soak', variantId: '12oz', quantity: 1, bundle: 'b1' }, { productId: 'oat-honey-hand-lotion', variantId: '8oz', quantity: 1, bundle: 'b1' }], shippingAddress: NJ });
-check('spa-set bundle 15%', [p.subtotal, p.bundleDiscount, p.shipping.amount, p.tax, p.total], [54.99, 8.25, 6.95, 3.56, 57.25]);
-p = await q({ items: [{ productId: 'eucalyptus-mint', variantId: '8oz', quantity: 1, bundle: 'b2' }, { productId: 'oat-honey-hand-lotion', variantId: '8oz', quantity: 1, bundle: 'b2' }], shippingAddress: NJ });
-check('incomplete bundle → no discount', [p.bundleDiscount, p.subtotal, p.lines.every((l) => l.bundle === null)], [0, 40.99, true]);
+p = await q({ items: [{ productId: 'eucalyptus-mint', variantId: '8oz', quantity: 1, bundle: 'b1' }, { productId: 'eucalyptus-recovery-soak', variantId: '12oz', quantity: 1, bundle: 'b1' }, { productId: 'brown-sugar-vanilla-scrub', variantId: '8oz', quantity: 1, bundle: 'b1' }], shippingAddress: NJ });
+check('spa-set bundle 15%', [p.subtotal, p.bundleDiscount, p.shipping.amount, p.tax, p.total], [56.99, 8.55, 6.95, 3.67, 59.06]);
+p = await q({ items: [{ productId: 'eucalyptus-mint', variantId: '8oz', quantity: 1, bundle: 'b2' }, { productId: 'brown-sugar-vanilla-scrub', variantId: '8oz', quantity: 1, bundle: 'b2' }], shippingAddress: NJ });
+check('incomplete bundle → no discount', [p.bundleDiscount, p.subtotal, p.lines.every((l) => l.bundle === null)], [0, 42.99, true]);
 p = await q({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 1 }], shippingAddress: NJ, discountCode: 'welcome10' });
 check('WELCOME10 first order', [p.discount.code, p.discount.amount, p.total], ['WELCOME10', 2.5, 31.39]);
 check('WELCOME10 rejected for repeat buyer', await err({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 1 }], shippingAddress: NJ, discountCode: 'WELCOME10' }, 'repeat'), ['failed-precondition', 'WELCOME10 is for first orders only.']);
@@ -51,6 +51,8 @@ check('stock exceeded', await err({ items: [{ productId: 'cinnamon-spice', varia
   check('active product still sells when demo products are off', real.subtotal, 24.99);
   check('demo product sells while demo products are on', (await q({ items: ONE, shippingAddress: NJ })).subtotal, 24.99);
 }
+overrides['old-lotion'] = { ...CATALOG[0], id: 'old-lotion', category: 'lotion', status: 'active' };
+check('retired lotion category cannot be bought', (await err({ items: [{ productId: 'old-lotion', variantId: '8oz', quantity: 1 }], shippingAddress: NJ }))[0], 'failed-precondition');
 check('unknown product', (await err({ items: [{ productId: 'ghost', variantId: 'x', quantity: 1 }], shippingAddress: NJ }))[0], 'failed-precondition');
 check('qty 0', (await err({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 0 }], shippingAddress: NJ }))[0], 'invalid-argument');
 check('qty 21', (await err({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 21 }], shippingAddress: NJ }))[0], 'invalid-argument');

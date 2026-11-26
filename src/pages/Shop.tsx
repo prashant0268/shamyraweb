@@ -9,10 +9,10 @@ import ProductCard from '../components/ui/ProductCard';
 import NotFound from './NotFound';
 import { CATEGORY_LABELS, type Category } from '../types';
 
-const CATS: { key: Category | 'all' | 'body'; label: string }[] = [{ key: 'all', label: 'All' }, { key: 'candle', label: 'Candles' }, { key: 'body', label: 'Bath & Body' }, { key: 'scrub', label: 'Scrubs' }, { key: 'lotion', label: 'Lotions' }, { key: 'salt', label: 'Bath Salts' }, { key: 'set', label: 'Gift Sets' }];
+const CATS: { key: Category | 'all' | 'body'; label: string }[] = [{ key: 'all', label: 'All' }, { key: 'candle', label: 'Candles' }, { key: 'body', label: 'Bath & Body' }, { key: 'scrub', label: 'Scrubs' }, { key: 'salt', label: 'Bath Salts' }, { key: 'set', label: 'Gift Sets' }];
 const TITLES: Record<string, string> = { all: 'Everything', body: 'Bath & Body', ...CATEGORY_LABELS };
-const BANNERS: Record<string, string> = { all: IMG.sceneCluster, candle: IMG.catCandles, body: IMG.bath, scrub: IMG.catScrubs, lotion: IMG.catLotions, salt: IMG.catSalts, set: IMG.catSets };
-const BLURBS: Record<string, string> = { all: 'Candles, scrubs, lotions, soaks and sets. Every scent family runs across the whole line.', candle: 'Hand-poured coconut-soy in 4, 8 and 12 oz. Cotton or wood wicks, 45–60 hours.', body: 'Scrubs, lotions and soaks that share a scent family with a candle.', scrub: 'Fine sugar or coffee grounds in almond and jojoba oil.', lotion: 'Fast-absorbing, fragrance-light, full INCI on the label.', salt: 'Magnesium-rich epsom and pink salt soaks.', set: 'Boxed and ready, matched by scent.' };
+const BANNERS: Record<string, string> = { all: IMG.sceneCluster, candle: IMG.catCandles, body: IMG.bath, scrub: IMG.catScrubs, salt: IMG.catSalts, set: IMG.catSets };
+const BLURBS: Record<string, string> = { all: 'Candles, scrubs, soaks and sets. Every scent family runs across the whole line.', candle: 'Hand-poured coconut-soy in 4, 8 and 12 oz. Cotton or wood wicks, 45–60 hours.', body: 'Scrubs and soaks that share a scent family with a candle.', scrub: 'Fine sugar or coffee grounds in almond and jojoba oil.', salt: 'Magnesium-rich epsom and pink salt soaks.', set: 'Boxed and ready, matched by scent.' };
 
 export default function Shop() {
   const { category = 'all' } = useParams();

@@ -13,7 +13,6 @@ const SHIPPING = { country: 'US', price: '6.95 USD' }; // flat rate; free US shi
 const CATEGORY = {
   candle: { label: 'Candles', google: 'Home & Garden > Decor > Home Fragrances > Candles' },
   scrub: { label: 'Body Scrubs', google: 'Health & Beauty > Personal Care > Cosmetics > Bath & Body' },
-  lotion: { label: 'Lotions', google: 'Health & Beauty > Personal Care > Cosmetics > Bath & Body' },
   salt: { label: 'Bath Salts', google: 'Health & Beauty > Personal Care > Cosmetics > Bath & Body' },
   set: { label: 'Gift Sets', google: 'Arts & Entertainment > Party & Celebration > Gift Giving' },
 };
@@ -97,7 +96,7 @@ export function renderFeed(items) {
     '  <channel>',
     `    <title>${esc(BRAND)}</title>`,
     `    <link>${SITE}/</link>`,
-    '    <description>Hand-poured coconut-soy candles, body scrubs, lotions and bath salts made in New Jersey.</description>',
+    '    <description>Hand-poured coconut-soy candles, body scrubs and bath salts made in New Jersey.</description>',
     `    <!-- Shipping: flat ${SHIPPING.price} to ${SHIPPING.country}; free US shipping on orders over $60 (set as a Merchant Center shipping service). -->`,
   ];
   for (const it of items) {

@@ -9,7 +9,7 @@ export const SITE = 'https://kindflames.com';
 const CATALOG = 'src/data/catalog.json';
 export const catalog = JSON.parse(readFileSync(resolve(root, CATALOG), 'utf8'));
 
-const CATEGORIES = ['candle', 'body', 'scrub', 'lotion', 'salt', 'set'];
+const CATEGORIES = ['candle', 'body', 'scrub', 'salt', 'set'];
 const INFO = ['about', 'contact', 'shipping-returns', 'candle-care', 'faq', 'privacy', 'terms'];
 
 /** @returns {{ path: string, source: string[], sitemap: boolean }[]} */

@@ -8,7 +8,7 @@ const DEFAULT_IMAGE = `${SITE}/img/og.jpg`;
 export function useSeo(opts: { title?: string; description?: string; image?: string; path?: string; noindex?: boolean }) {
   useEffect(() => {
     const title = opts.title ? `${opts.title} · Kind Flames` : 'Kind Flames — Hand-poured candles & small-batch bath and body';
-    const description = opts.description || 'Hand-poured coconut-soy candles, body scrubs, lotions and bath salts made in New Jersey. Scents built to pair.';
+    const description = opts.description || 'Hand-poured coconut-soy candles, body scrubs and bath salts made in New Jersey. Scents built to pair.';
     const url = SITE + (opts.path ?? window.location.pathname);
     const image = opts.image ? absUrl(opts.image) : DEFAULT_IMAGE;
     document.title = title;

@@ -12,7 +12,7 @@ type Col = { title: string; links: { to: string; label: string; note?: string }[
 type Tile = { to: string; img: string; title: string; sub: string };
 type Mega = { key: string; label: string; to: string; cols: Col[]; tiles: Tile[] };
 
-const CATS: Category[] = ['candle', 'scrub', 'lotion', 'salt', 'set'];
+const CATS: Category[] = ['candle', 'scrub', 'salt', 'set'];
 
 export default function Navbar() {
   const { count, open } = useCart();

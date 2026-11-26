@@ -1070,7 +1070,7 @@ async function stripeTaxRateId(stripe, state, rate) {
 /* ----------------------------- subscriptions ------------------------------ */
 const PLANS = {
   monthly: { id: "monthly", name: "Candle of the Month", amount: 2400, interval: "month", intervalCount: 1, description: "One 8 oz candle in a new scent every month, free shipping." },
-  quarterly: { id: "quarterly", name: "Seasonal Spa Box", amount: 6900, interval: "month", intervalCount: 3, description: "A candle, a bath soak and a lotion every season, free shipping." },
+  quarterly: { id: "quarterly", name: "Seasonal Spa Box", amount: 6900, interval: "month", intervalCount: 3, description: "A candle, a bath soak and a body scrub every season, free shipping." },
 };
 exports.listPlans = onCall({ cors: true }, async () => ({ plans: Object.values(PLANS) }));
 

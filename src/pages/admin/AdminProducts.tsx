@@ -63,7 +63,7 @@ function ProductEditor({ product, isNew, onDone }: { product: Product; isNew: bo
   };
   const remove = async () => { if (!confirmDelete) { setConfirmDelete(true); return; } setBusy(true); try { await deleteProduct(p.id); toast('Deleted'); await onDone(); } finally { setBusy(false); } };
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const isBody = ['scrub', 'lotion', 'salt'].includes(p.category);
+  const isBody = ['scrub', 'salt'].includes(p.category);
 
   return (
     <div className="space-y-4">

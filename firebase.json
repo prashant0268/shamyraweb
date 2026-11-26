@@ -89,6 +89,21 @@
     ],
     "redirects": [
       {
+        "source": "/shop/lotion",
+        "destination": "/shop",
+        "type": 301
+      },
+      {
+        "source": "/product/oat-honey-hand-lotion",
+        "destination": "/shop",
+        "type": 301
+      },
+      {
+        "source": "/product/lavender-body-lotion",
+        "destination": "/shop",
+        "type": 301
+      },
+      {
         "source": "/products",
         "destination": "/shop",
         "type": 301

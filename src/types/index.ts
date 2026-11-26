@@ -1,9 +1,9 @@
-export type Category = 'candle' | 'scrub' | 'lotion' | 'salt' | 'set';
+export type Category = 'candle' | 'scrub' | 'salt' | 'set';
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  candle: 'Candles', scrub: 'Body Scrubs', lotion: 'Lotions', salt: 'Bath Salts', set: 'Gift Sets',
+  candle: 'Candles', scrub: 'Body Scrubs', salt: 'Bath Salts', set: 'Gift Sets',
 };
-export const BODY_CATEGORIES: Category[] = ['scrub', 'lotion', 'salt'];
+export const BODY_CATEGORIES: Category[] = ['scrub', 'salt'];
 
 export interface Variant { id: string; label: string; price: number; compareAt?: number; stock?: number; sku?: string }
 
