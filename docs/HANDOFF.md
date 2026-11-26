@@ -93,3 +93,11 @@ Review/newsletter/quote abuse, admin-claim hardening, discount reservations, tra
 low-stock email, back-in-stock emails and App Check (off by default). What changed, how to turn App Check on, and
 the deploy order (functions → hosting → rules): **docs/APP_CHECK.md**.
 
+
+## Audit follow-ups (2026-11-26)
+- **Postal address (CAN-SPAM):** set `MAILING_ADDRESS=` in `functions/.env` (street address or registered PO box/PMB), then deploy functions. Until then email footers have no address.
+- **Stripe webhook events:** besides the payment events, also subscribe the endpoint (test and prod) to `customer.subscription.updated` and `customer.subscription.deleted` so cancelled/past-due subscribers aren't shipped.
+- **Subscription tax:** new subscriptions charge state sales tax from Admin → Settings tax rates (NJ 6.625%). Existing subscriptions keep their old price until changed in Stripe.
+- **Corporate invoices:** Admin → Quotes now has a Sales tax choice (NJ / none).
+- **Guest order lookup:** `/order-status` (order number + email); receipts link there.
+- **Monitoring (owner):** create a Sentry project or a Cloud Monitoring uptime check on https://kindflames.com plus an alert on Cloud Functions error count, notifying the owner email.
