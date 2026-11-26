@@ -17,9 +17,12 @@ export async function loadProducts(): Promise<{ products: Product[]; source: 'fi
   return { products: [...LOCAL_CATALOG].sort((a, b) => a.sortOrder - b.sortOrder), source: 'local' };
 }
 
-export const activeOnly = (ps: Product[]) => ps.filter((p) => p.active !== false);
+/** Demo = a sample product (no status or status 'demo'); real products are saved with status 'active'. */
+export const isDemo = (p: Product) => p.status !== 'active';
+/** Products the website may show: not hidden by the admin, and not demo when demo products are switched off. */
+export const activeOnly = (ps: Product[], showDemo = true) => ps.filter((p) => p.active !== false && (showDemo || !isDemo(p)));
 /** Active products that belong in public listings; `hidden` ones stay reachable by URL and purchasable. */
-export const listed = (ps: Product[]) => activeOnly(ps).filter((p) => !p.hidden);
+export const listed = (ps: Product[], showDemo = true) => activeOnly(ps, showDemo).filter((p) => !p.hidden);
 export const byCategory = (ps: Product[], c: Category | 'all' | 'body') => c === 'all' ? ps : c === 'body' ? ps.filter((p) => ['scrub', 'lotion', 'salt'].includes(p.category)) : ps.filter((p) => p.category === c);
 export const inStock = (p: Product) => p.variants.some((v) => typeof v.stock !== 'number' || v.stock > 0);
 export const minPrice = (p: Product) => Math.min(...p.variants.map((v) => v.price));

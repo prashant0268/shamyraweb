@@ -49,7 +49,8 @@ export default function AdminSettings() {
               </label>
             ); })}
           </div>
-          <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={s.placeholderImages !== false} onChange={(e) => setS({ ...s, placeholderImages: e.target.checked })} /><span>Use placeholder product photos (stock imagery from Unsplash) until the real renders are uploaded. Turn this off once the Gemini images are in place.</span></label>
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={s.placeholderImages !== false} onChange={(e) => setS({ ...s, placeholderImages: e.target.checked })} /><span>Use placeholder product photos (stock imagery from Unsplash) for demo products. Active products always show their own uploaded photos.</span></label>
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={s.showDemoProducts !== false} onChange={(e) => setS({ ...s, showDemoProducts: e.target.checked })} /><span><b>Include demo products on the website.</b> Demo products are the sample catalog; products you mark Active always show. Turn this off once your real products are in, and demo products disappear from the shop and can no longer be bought.</span></label>
         </div>
         <div className="card space-y-3 p-5"><h2 className="text-lg">Welcome popup</h2>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.popup?.enabled !== false} onChange={(e) => setS({ ...s, popup: { ...s.popup!, enabled: e.target.checked } })} /> Show first-visit email popup (10% off)</label>

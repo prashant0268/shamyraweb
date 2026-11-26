@@ -15,6 +15,9 @@ export interface Product {
   rating?: number | null; reviewCount?: number; badge?: string;
   /** Purchasable by direct URL but left out of shop/home listings (e.g. the corporate sample kit). */
   hidden?: boolean;
+  /** 'active' = a real product you added; anything else (including missing) = demo/sample product.
+   *  Demo products show only while settings.showDemoProducts is on. */
+  status?: 'active' | 'demo';
 }
 
 export interface CartItem { productId: string; variantId: string; quantity: number; bundle?: string | null }
@@ -58,6 +61,8 @@ export interface StoreSettings {
   theme?: string;
   /** Show internet stand-in photos for products until the real renders are uploaded. */
   placeholderImages?: boolean;
+  /** Show demo (sample) products on the website alongside active ones. Turn off once the real catalog is in. */
+  showDemoProducts?: boolean;
   /** First-visit email popup. */
   popup?: { enabled: boolean; headline: string; body: string; code: string; delaySeconds: number };
   social?: { instagram?: string; facebook?: string; tiktok?: string; pinterest?: string };

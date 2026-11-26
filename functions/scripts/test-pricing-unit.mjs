@@ -42,6 +42,15 @@ check('bad code', (await err({ items: [{ productId: 'lavender-dreams', variantId
 check('expired code', (await err({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 1 }], shippingAddress: NJ, discountCode: 'OLD' }))[0], 'failed-precondition');
 check('exhausted code', (await err({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 1 }], shippingAddress: NJ, discountCode: 'FULL' }))[0], 'failed-precondition');
 check('stock exceeded', await err({ items: [{ productId: 'cinnamon-spice', variantId: '8oz', quantity: 7 }], shippingAddress: NJ }), ['failed-precondition', 'Only 6 left of Cinnamon Spice (8 oz).']);
+{
+  const off = { ...settings, showDemoProducts: false };
+  const demoErr = await priceCart({ items: ONE, shippingAddress: NJ }, off, 'u1', deps).then(() => 'no-error', (e) => e.code);
+  check('demo product blocked when demo products are off', demoErr, 'failed-precondition');
+  overrides['real-candle'] = { ...CATALOG[0], id: 'real-candle', status: 'active' };
+  const real = await priceCart({ items: [{ productId: 'real-candle', variantId: '8oz', quantity: 1 }], shippingAddress: NJ }, off, 'u1', deps);
+  check('active product still sells when demo products are off', real.subtotal, 24.99);
+  check('demo product sells while demo products are on', (await q({ items: ONE, shippingAddress: NJ })).subtotal, 24.99);
+}
 check('unknown product', (await err({ items: [{ productId: 'ghost', variantId: 'x', quantity: 1 }], shippingAddress: NJ }))[0], 'failed-precondition');
 check('qty 0', (await err({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 0 }], shippingAddress: NJ }))[0], 'invalid-argument');
 check('qty 21', (await err({ items: [{ productId: 'lavender-dreams', variantId: '8oz', quantity: 21 }], shippingAddress: NJ }))[0], 'invalid-argument');

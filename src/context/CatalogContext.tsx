@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   taxRates: { NJ: 0.06625 }, cardPaymentsEnabled: false, paypalEnabled: true,
   announcement: { text: 'Free US shipping on orders over $60', visible: true, messages: ['Free US shipping on orders over $60', 'New here? Take 10% off your first order with WELCOME10', '30-day happiness guarantee · wrong scent? We swap it'] },
   homepage: { showChristmas: true, showCorporate: true, showNewsletter: true },
-  theme: 'hearth', placeholderImages: true,
+  theme: 'hearth', placeholderImages: true, showDemoProducts: true,
   popup: { enabled: true, headline: 'Take 10% off your first order', body: 'Join the list for new scents, restocks and the occasional candle-care tip. One email a week at most.', code: 'WELCOME10', delaySeconds: 6 },
   social: { instagram: 'https://instagram.com/kindflames', facebook: '', tiktok: '', pinterest: '' },
 };
@@ -58,8 +58,9 @@ export const CatalogProvider = ({ children }: { children: ReactNode }) => {
   // The build-time prerender renders the bundled catalog only, so its HTML is deterministic and matches first paint.
   useEffect(() => { if (!isPrerender()) refresh(); }, [refresh]);
 
-  const products = useMemo(() => listed(allProducts), [allProducts]);
-  const active = useMemo(() => activeOnly(allProducts), [allProducts]);
+  const showDemo = settings.showDemoProducts !== false;
+  const products = useMemo(() => listed(allProducts, showDemo), [allProducts, showDemo]);
+  const active = useMemo(() => activeOnly(allProducts, showDemo), [allProducts, showDemo]);
   const value = useMemo<CatalogContextType>(() => ({
     products, allProducts, settings, loading, source, refresh,
     bySlug: (slug) => active.find((p) => p.slug === slug || p.id === slug),

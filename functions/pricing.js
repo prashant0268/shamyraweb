@@ -26,7 +26,8 @@ async function priceCart({ items, discountCode, shippingAddress, shippingMethod,
     const qty = Number(item.quantity);
     if (!Number.isInteger(qty) || qty < 1 || qty > 20) fail("invalid-argument", "Invalid quantity.");
     const product = await getProduct(String(item.productId));
-    if (!product || product.active === false) fail("failed-precondition", `"${item.productId}" is no longer available.`);
+    const demoOff = settings?.showDemoProducts === false && product?.status !== "active";
+    if (!product || product.active === false || demoOff) fail("failed-precondition", `"${product?.name || item.productId}" is no longer available.`);
     const variant = (product.variants || []).find((v) => v.id === item.variantId) || product.variants?.[0];
     if (!variant) fail("failed-precondition", `${product.name} has no purchasable option.`);
     if (typeof variant.stock === "number" && variant.stock < qty) {

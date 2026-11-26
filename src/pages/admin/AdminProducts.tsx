@@ -6,14 +6,15 @@ import { deleteProduct, importDefaultCatalog, saveProduct, uploadProductImage } 
 import { money, slugify } from '../../lib/format';
 import Button from '../../components/ui/Button';
 import { Badge, Field, ProductImage } from '../../components/ui/Bits';
+import { isDemo } from '../../lib/catalog';
 import { CATEGORY_LABELS, type Category, type Product, type Variant } from '../../types';
 
 const COLLECTIONS = ['best-sellers', 'new-arrivals', 'christmas', 'gift-sets', 'bath-body', 'corporate'];
-const blank = (): Product => ({ id: '', slug: '', name: '', category: 'candle', tagline: '', description: '', images: [], family: 'Floral', notes: { top: '', heart: '', base: '' }, burnTime: '', wax: 'Coconut-soy blend', wick: 'Cotton', ingredients: '', variants: [{ id: '8oz', label: '8 oz', price: 24.99, stock: 20 }], featured: false, isNewArrival: true, collections: [], active: true, sortOrder: 99, badge: '' });
+const blank = (): Product => ({ id: '', slug: '', name: '', category: 'candle', tagline: '', description: '', images: [], family: 'Floral', notes: { top: '', heart: '', base: '' }, burnTime: '', wax: 'Coconut-soy blend', wick: 'Cotton', ingredients: '', variants: [{ id: '8oz', label: '8 oz', price: 24.99, stock: 20 }], featured: false, isNewArrival: true, collections: [], active: true, status: 'active', sortOrder: 99, badge: '' });
 
 export default function AdminProducts() {
   const { id } = useParams();
-  const { allProducts, source, refresh } = useCatalog();
+  const { allProducts, source, refresh, settings } = useCatalog();
   const toast = useToast();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
@@ -32,10 +33,11 @@ export default function AdminProducts() {
       <div className="flex flex-wrap items-center gap-2"><input className="input max-w-xs" placeholder="Search products" value={q} onChange={(e) => setQ(e.target.value)} /><div className="flex-1" />
         {source === 'local' ? <Button variant="accent" size="sm" disabled={busy} onClick={() => importCatalog(false)}>Import default catalog to Firestore</Button> : <Button variant="ghost" size="sm" disabled={busy} onClick={() => importCatalog(false)}>Add missing defaults</Button>}
         <Button size="sm" to="/admin/products/new">+ Add product</Button></div>
+      <p className="text-sm text-muted">{allProducts.filter((p) => p.active !== false && !isDemo(p)).length} active · {allProducts.filter((p) => p.active !== false && isDemo(p)).length} demo · {allProducts.filter((p) => p.active === false).length} hidden. Demo products are {settings.showDemoProducts !== false ? 'shown on' : 'hidden from'} the website (<Link to="/admin/settings" className="underline">Settings → Include demo products</Link>).</p>
       {source === 'local' && <p className="text-sm text-muted">Products are currently served from the built-in catalog. Import once, then edit here; the store switches to Firestore automatically.</p>}
       <div className="card overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead><tr className="text-left text-xs uppercase tracking-wider text-muted"><th className="p-3">Product</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Stock</th><th className="p-3">Status</th><th className="p-3" /></tr></thead><tbody>
         {list.map((p) => { const stock = p.variants.reduce((t, v) => t + (typeof v.stock === 'number' ? v.stock : 0), 0); return (
-          <tr key={p.id} className="border-t border-line"><td className="p-3"><div className="flex items-center gap-2"><div className="h-9 w-9 overflow-hidden rounded bg-surface-2"><ProductImage product={p} size={400} className="h-full w-full" /></div><b>{p.name}</b></div></td><td className="p-3">{CATEGORY_LABELS[p.category]}</td><td className="num p-3">{money(Math.min(...p.variants.map((v) => v.price)))}</td><td className="num p-3">{stock}{stock < 10 && <Badge tone={stock ? 'warn' : 'bad'} className="ml-1">{stock ? 'low' : 'out'}</Badge>}</td><td className="p-3"><Badge tone={p.active ? 'good' : 'neutral'}>{p.active ? 'Active' : 'Hidden'}</Badge></td><td className="p-3 text-right">{source === 'firestore' ? <Link to={`/admin/products/${p.id}`} className="text-pine underline">Edit</Link> : <span className="text-muted">import first</span>}</td></tr>
+          <tr key={p.id} className="border-t border-line"><td className="p-3"><div className="flex items-center gap-2"><div className="h-9 w-9 overflow-hidden rounded bg-surface-2"><ProductImage product={p} size={400} className="h-full w-full" /></div><b>{p.name}</b></div></td><td className="p-3">{CATEGORY_LABELS[p.category]}</td><td className="num p-3">{money(Math.min(...p.variants.map((v) => v.price)))}</td><td className="num p-3">{stock}{stock < 10 && <Badge tone={stock ? 'warn' : 'bad'} className="ml-1">{stock ? 'low' : 'out'}</Badge>}</td><td className="p-3">{p.active === false ? <Badge tone="neutral">Hidden</Badge> : isDemo(p) ? <Badge tone="warn">Demo</Badge> : <Badge tone="good">Active</Badge>}</td><td className="p-3 text-right">{source === 'firestore' ? <Link to={`/admin/products/${p.id}`} className="text-pine underline">Edit</Link> : <span className="text-muted">import first</span>}</td></tr>
         ); })}
       </tbody></table></div>
     </div>
@@ -65,7 +67,7 @@ function ProductEditor({ product, isNew, onDone }: { product: Product; isNew: bo
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2"><Link to="/admin/products" className="text-sm text-muted">← Products</Link><h1 className="text-2xl">{isNew ? 'New product' : p.name}</h1><div className="flex-1" /><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.active} onChange={(e) => set('active', e.target.checked)} /> Active</label><Button variant="accent" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</Button></div>
+      <div className="flex flex-wrap items-center gap-2"><Link to="/admin/products" className="text-sm text-muted">← Products</Link><h1 className="text-2xl">{isNew ? 'New product' : p.name}</h1><div className="flex-1" /><label className="flex items-center gap-2 text-sm">Status <select className="input w-auto py-1" value={p.active === false ? 'hidden' : isDemo(p) ? 'demo' : 'active'} onChange={(e) => { const v = e.target.value; setP((s) => ({ ...s, active: v !== 'hidden', status: v === 'demo' ? 'demo' : v === 'active' ? 'active' : s.status })); }}><option value="active">Active (real product)</option><option value="demo">Demo (sample)</option><option value="hidden">Hidden</option></select></label><Button variant="accent" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</Button></div>
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="card space-y-4 p-5">
           <div className="grid gap-3 sm:grid-cols-2"><Field label="Name"><input className="input" value={p.name} onChange={(e) => set('name', e.target.value)} /></Field><Field label="Slug (URL)"><input className="input" value={p.slug} placeholder={slugify(p.name)} onChange={(e) => set('slug', e.target.value)} /></Field></div>

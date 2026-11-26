@@ -50,7 +50,7 @@ export const Alert = ({ children, tone = 'bad' }: { children: ReactNode; tone?: 
 // eslint-disable-next-line react-refresh/only-export-components -- small hook shared by the product components
 export function useProductImages(product: Product): string[] {
   const { settings } = useCatalog();
-  if (settings.placeholderImages !== false) return placeholderImages(product.id);
+  if (settings.placeholderImages !== false && product.status !== 'active') return placeholderImages(product.id);
   return product.images?.length ? product.images : [];
 }
 
