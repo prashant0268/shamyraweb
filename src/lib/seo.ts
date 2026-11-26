@@ -25,7 +25,9 @@ export function useSeo(opts: { title?: string; description?: string; image?: str
     set('meta[name="twitter:card"]', 'content', 'summary_large_image');
     // Outside production (test site, dev server) every page is noindex, whatever the page asked for.
     set('meta[name="robots"]', 'content', opts.noindex || !isProdEnv() ? 'noindex,nofollow' : 'index,follow');
-    set('link[rel="canonical"]', 'href', url);
+    // A noindex page (404, checkout…) gets no canonical: it should not point search engines anywhere.
+    if (opts.noindex) document.head.querySelector('link[rel="canonical"]')?.remove();
+    else set('link[rel="canonical"]', 'href', url);
   }, [opts.title, opts.description, opts.image, opts.path, opts.noindex]);
 }
 

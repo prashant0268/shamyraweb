@@ -34,3 +34,18 @@ export function track(event: string, params?: Record<string, unknown>) {
   for (const m of toMetaEvent(event, params)) fbTrack(m.name, m.params, eventId);
   if (import.meta.env.DEV) console.debug('[analytics]', event, params || '');
 }
+
+const TRACKED_KEY = 'kf_purchases_tracked';
+/**
+ * `purchase` fires once per order id per browser. Reloading or revisiting the confirmation page (or the Stripe
+ * redirect plus a later visit) must not count the revenue twice. Returns whether it fired.
+ */
+export function trackPurchaseOnce(orderId: string, params: Record<string, unknown>): boolean {
+  if (!orderId) return false;
+  let seen: string[] = [];
+  try { seen = JSON.parse(localStorage.getItem(TRACKED_KEY) || '[]') as string[]; if (!Array.isArray(seen)) seen = []; } catch { seen = []; }
+  if (seen.includes(orderId)) return false;
+  try { localStorage.setItem(TRACKED_KEY, JSON.stringify([...seen, orderId].slice(-50))); } catch { /* ignore */ }
+  track('purchase', params);
+  return true;
+}

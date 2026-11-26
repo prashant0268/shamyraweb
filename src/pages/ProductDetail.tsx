@@ -13,6 +13,7 @@ import { productJsonLd } from '../lib/productJsonLd';
 import { track } from '../lib/analytics';
 import { useWishlist } from '../lib/wishlist';
 import { FAMILY_IMAGES } from '../data/imagery';
+import { unsplashSrcSet, CARD_WIDTHS, srcSet as localSrcSet } from '../lib/images';
 import ProductCard from '../components/ui/ProductCard';
 import Button from '../components/ui/Button';
 import { Badge, Qty, Stars, Field, Rail, ValueStrip, useProductImages } from '../components/ui/Bits';
@@ -28,7 +29,7 @@ function Gallery({ product }: { product: Product }) {
   const src = imgs[i] ?? imgs[0];
   return (
     <div className="self-start lg:sticky lg:top-24">
-      <div className="aspect-[4/5] overflow-hidden rounded-img bg-surface-2">{src ? <img key={src} src={src} alt={product.name} className="fade-in h-full w-full object-cover" loading="eager" fetchPriority="high" /> : <div className="flex h-full items-center justify-center text-muted">No photo</div>}</div>
+      <div className="aspect-[4/5] overflow-hidden rounded-img bg-surface-2">{src ? <img key={src} src={src} srcSet={src.startsWith('/') ? localSrcSet(src) : unsplashSrcSet(src, CARD_WIDTHS)} sizes="(max-width: 1023px) 100vw, 52vw" alt={product.name} width={900} height={1125} className="h-full w-full object-cover" loading="eager" fetchPriority="high" /> : <div className="flex h-full items-center justify-center text-muted">No photo</div>}</div>
       {imgs.length > 1 && (
         <div className="mt-3 flex gap-2">{imgs.map((s, k) => <button key={s} type="button" onClick={() => setI(k)} aria-label={`Photo ${k + 1}`} className={`h-16 w-16 overflow-hidden rounded-img border-2 ${k === i ? 'border-ink' : 'border-transparent opacity-70 hover:opacity-100'}`}><img src={s} alt="" className="h-full w-full object-cover" loading="lazy" /></button>)}</div>
       )}
@@ -52,7 +53,7 @@ export default function ProductDetail() {
   const [stickyOn, setStickyOn] = useState(false);
   const ctaRef = useRef<HTMLDivElement>(null);
 
-  useSeo({ title: product?.name, description: product ? `${product.tagline || ''} ${product.description}`.trim() : undefined, image: product?.images[0], path: `/product/${slug}` });
+  useSeo({ title: product?.name ?? (loading ? undefined : 'Page not found'), description: product ? `${product.tagline || ''} ${product.description}`.trim() : undefined, image: product?.images[0], path: `/product/${slug}`, noindex: !product });
   useEffect(() => { if (product) { setVariantId(product.variants.find((v) => typeof v.stock !== 'number' || v.stock > 0)?.id || product.variants[0]!.id); setQty(1); track('view_item', { items: [{ item_id: product.id, item_name: product.name }] }); } }, [product]);
   useEffect(() => {
     if (!product) return;
@@ -71,7 +72,8 @@ export default function ProductDetail() {
   const pairs = useMemo(() => product ? products.filter((p) => p.id !== product.id && (p.family === product.family || (product.category === 'candle' ? BODY_CATEGORIES.includes(p.category) && p.family === product.family : p.category === 'candle' && p.family === product.family))).slice(0, 4) : [], [product, products]);
   const more = useMemo(() => product ? products.filter((p) => p.id !== product.id && !pairs.some((x) => x.id === p.id) && (p.category === product.category || p.featured)).slice(0, 8) : [], [product, products, pairs]);
 
-  if (loading && !product) return <div className="wrap py-24 text-center text-muted">Loading…</div>;
+  // Not in the bundled catalog: wait for Firestore before deciding it is a 404. Reserve the gallery's height.
+  if (loading && !product) return <div className="wrap py-6 sm:py-8" aria-busy="true"><div className="grid gap-8 lg:grid-cols-[1.05fr_.95fr] lg:gap-14"><div className="aspect-[4/5] rounded-img bg-surface-2" /><div className="min-h-[60vh]" /></div></div>;
   if (!product) return <NotFound />;
   const variant = (product.variants.find((v) => v.id === variantId) || product.variants[0]) as Variant;
   const soldOut = typeof variant.stock === 'number' && variant.stock <= 0;

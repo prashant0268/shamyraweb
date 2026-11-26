@@ -10,18 +10,13 @@ import Home from './pages/Home';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import OrderConfirmation from './pages/OrderConfirmation';
-import Account from './pages/Account';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import AuthAction from './pages/AuthAction';
 import InfoPage from './pages/InfoPage';
 import BuildASet from './pages/BuildASet';
-import Corporate from './pages/Corporate';
 import Gifts from './pages/Gifts';
-import Subscribe, { SubscribeThanks } from './pages/Subscribe';
 import NotFound from './pages/NotFound';
+import ErrorBoundary from './components/ErrorBoundary';
+import { Checkout, OrderConfirmation, Account, Login, Register, Corporate, Subscribe, SubscribeThanks } from './lazyRoutes';
 
 const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
 const Flyer = lazy(() => import('./pages/internal/prints/Flyer'));
@@ -29,7 +24,7 @@ const Flyer2 = lazy(() => import('./pages/internal/prints/Flyer2'));
 const FontPreview = lazy(() => import('./pages/internal/FontPreview'));
 const GiftInsert = lazy(() => import('./pages/internal/prints/GiftInsert'));
 
-const Loading = () => <div className="wrap py-24 text-center text-muted">Loading…</div>;
+const Loading = () => <div className="wrap min-h-[70vh] py-24 text-center text-muted" aria-busy="true">Loading…</div>;
 
 function AppRoutes() {
   const { pathname } = useLocation();
@@ -50,6 +45,7 @@ function AppRoutes() {
   }
   return (
     <Layout>
+      <Suspense fallback={<Loading />}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
@@ -72,12 +68,14 @@ function AppRoutes() {
         <Route path="/:slug" element={<InfoPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
     </Layout>
   );
 }
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       <AuthProvider>
         <CatalogProvider>
@@ -91,5 +89,6 @@ export default function App() {
         </CatalogProvider>
       </AuthProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }

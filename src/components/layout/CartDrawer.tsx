@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
@@ -7,6 +7,7 @@ import { money } from '../../lib/format';
 import { inStock } from '../../lib/catalog';
 import { ProductImage, Qty } from '../ui/Bits';
 import Button from '../ui/Button';
+import { useFocusTrap } from '../../lib/useFocusTrap';
 import type { Product, Variant } from '../../types';
 
 const firstVariant = (p: Product) => (p.variants.find((v) => typeof v.stock !== 'number' || v.stock > 0) || p.variants[0]) as Variant;
@@ -14,7 +15,8 @@ const firstVariant = (p: Product) => (p.variants.find((v) => typeof v.stock !== 
 export default function CartDrawer() {
   const { hydrated, isOpen, close, subtotal, setQuantity, remove, add } = useCart();
   const { settings, products } = useCatalog();
-  useEffect(() => { const h = (e: KeyboardEvent) => e.key === 'Escape' && close(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [close]);
+  const panel = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panel, close);
   useEffect(() => { document.body.style.overflow = isOpen ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [isOpen]);
 
   // "Complete the set": same scent family as something in the bag, not already in it. Falls back to best sellers.
@@ -29,10 +31,10 @@ export default function CartDrawer() {
   if (!isOpen) return null;
   const left = Math.max(0, settings.freeShippingThreshold - subtotal);
   return (
-    <div className="fixed inset-0 z-[60] flex justify-end" role="dialog" aria-modal="true" aria-label="Shopping bag">
-      <button className="flex-1 bg-black/40" aria-label="Close bag" onClick={close} />
-      <div className="flex h-full w-[min(440px,100vw)] flex-col bg-surface shadow-2xl">
-        <div className="flex items-center justify-between border-b border-line px-5 py-4"><span className="font-display text-xl font-bold">Your bag {hydrated.length > 0 && <span className="text-sm font-normal text-muted">({hydrated.reduce((n, l) => n + l.quantity, 0)})</span>}</span><button onClick={close} aria-label="Close" className="rounded-btn p-2 hover:bg-surface-2"><X size={20} /></button></div>
+    <div className="fixed inset-0 z-[60] flex justify-end">
+      <button className="flex-1 bg-black/40" aria-label="Close bag" tabIndex={-1} onClick={close} />
+      <div ref={panel} role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title" className="flex h-full w-[min(440px,100vw)] flex-col bg-surface shadow-2xl">
+        <div className="flex items-center justify-between border-b border-line px-5 py-4"><h2 id="cart-drawer-title" className="font-display text-xl font-bold">Your bag {hydrated.length > 0 && <span className="text-sm font-normal text-muted">({hydrated.reduce((n, l) => n + l.quantity, 0)})</span>}</h2><button onClick={close} aria-label="Close bag" className="rounded-btn p-2 hover:bg-surface-2"><X size={20} /></button></div>
         {hydrated.length > 0 && (
           <div className="border-b border-line px-5 py-3">
             <div className="text-xs">{left > 0 ? <>You're <b>{money(left)}</b> from free shipping</> : <b className="text-good">You've unlocked free shipping</b>}</div>

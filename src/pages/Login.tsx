@@ -16,7 +16,7 @@ export default function Login() {
   const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [busy, setBusy] = useState(false); const [reset, setReset] = useState(false);
 
   const run = async (fn: () => Promise<unknown>, ok?: () => void) => { setError(''); setMessage(''); setBusy(true); try { await fn(); ok?.(); } catch (e) { const c = (e as { code?: string }).code || ''; setError(c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found') ? 'Email or password is incorrect.' : errorMessage(e)); } finally { setBusy(false); } };
-  const submit = (e: FormEvent) => { e.preventDefault(); reset ? run(() => resetPassword(email), () => setMessage('Reset link sent. Check your inbox.')) : run(() => login(email, password), () => navigate(next)); };
+  const submit = (e: FormEvent) => { e.preventDefault(); if (reset) run(() => resetPassword(email), () => setMessage('Reset link sent. Check your inbox.')); else run(() => login(email, password), () => navigate(next)); };
 
   return (
     <div className="wrap flex justify-center py-12"><div className="w-full max-w-md space-y-6">

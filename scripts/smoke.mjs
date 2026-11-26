@@ -5,7 +5,8 @@ const [base = 'http://127.0.0.1:4173', out = '/tmp/shots', mode = 'desktop'] = p
 const routes = ['/', '/subscribe', '/subscribe/thanks', '/internal/prints/insert?code=GIFT-TEST&company=Acme', '/shop', '/shop/body', '/product/lavender-dreams', '/product/brown-sugar-vanilla-scrub', '/build-a-set', '/corporate', '/gifts', '/cart', '/checkout', '/login', '/shipping-returns', '/admin', '/nope'];
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const ctx = await browser.newContext({ viewport: mode === 'mobile' ? { width: 390, height: 844 } : { width: 1280, height: 900 }, deviceScaleFactor: 1, isMobile: mode === 'mobile' });
-await ctx.addInitScript(() => { try { localStorage.setItem('kf_popup_seen', String(Date.now())); } catch {} });
+// Popup and cookie banner answered up front so they don't cover what the test clicks.
+await ctx.addInitScript(() => { try { localStorage.setItem('kf_popup_seen', String(Date.now())); localStorage.setItem('kf_consent', JSON.stringify({ v: 1, analytics: false, ads: false, ts: Date.now() })); } catch { /* ignore */ } });
 const page = await ctx.newPage();
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`[console] ${m.text().slice(0, 300)}`); });

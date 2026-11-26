@@ -49,14 +49,14 @@ export const THEMES: ThemeMeta[] = [
     description: 'Playful and modern. Warm white, big rounded cards, terracotta buttons, a friendly serif for headlines.',
     inspiredBy: 'Otherland, Homesick, Paddywax',
     fonts: { display: 'DM Serif Display', body: 'DM Sans', href: gf(['DM+Serif+Display:ital@0;1', 'DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700']) },
-    swatches: ['#FBF5EC', '#1F5F5B', '#C9643B', '#2B2320'], heroImage: 'heroBright',
+    swatches: ['#FBF5EC', '#1F5F5B', '#B05733', '#2B2320'], heroImage: 'heroBright',
   },
   {
     id: 'apothecary', name: 'Apothecary', tagline: 'Sage, olive and clay',
     description: 'Botanical and clean. Pale sage backgrounds, olive primaries, clay accents, a readable book serif.',
     inspiredBy: 'Brooklyn Candle Studio, Voluspa',
     fonts: { display: 'Lora', body: 'Nunito Sans', href: gf(['Lora:ital,wght@0,400;0,500;0,600;1,400', 'Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700']) },
-    swatches: ['#EEF0EA', '#3D4F36', '#B5785A', '#22291F'], heroImage: 'heroBotanical',
+    swatches: ['#EEF0EA', '#3D4F36', '#98644B', '#22291F'], heroImage: 'heroBotanical',
   },
 ];
 

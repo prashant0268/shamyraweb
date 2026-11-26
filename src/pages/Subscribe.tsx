@@ -6,7 +6,7 @@ import { createSubscriptionCheckout, errorMessage, listPlans, verifySubscription
 import { money } from '../lib/format';
 import { useSeo } from '../lib/seo';
 import { isProdEnv } from '../lib/env';
-import { track } from '../lib/analytics';
+import { trackPurchaseOnce } from '../lib/analytics';
 import Button from '../components/ui/Button';
 import { Alert, Field } from '../components/ui/Bits';
 import type { Plan, ShippingAddress } from '../types';
@@ -24,7 +24,7 @@ export function SubscribeThanks() {
     if (loading) return;
     const sessionId = params.get('session_id');
     if (!sessionId) { setState('fail'); setMsg('Missing session.'); return; }
-    verifySubscription({ sessionId }).then((r) => { if (r.active) { setState('ok'); track('purchase', { transaction_id: r.subscription?.id, value: (r.subscription?.amount || 0), currency: 'USD', subscription: true }); } else { setState('fail'); setMsg(`Subscription status: ${r.status}`); } }).catch((e) => { setState('fail'); setMsg(errorMessage(e)); });
+    verifySubscription({ sessionId }).then((r) => { if (r.active) { setState('ok'); trackPurchaseOnce(`sub:${r.subscription?.id || sessionId}`, { transaction_id: r.subscription?.id, value: (r.subscription?.amount || 0), currency: 'USD', subscription: true }); } else { setState('fail'); setMsg(`Subscription status: ${r.status}`); } }).catch((e) => { setState('fail'); setMsg(errorMessage(e)); });
   }, [loading, params]);
   if (state === 'checking') return <div className="wrap py-24 text-center text-muted">Confirming your subscription…</div>;
   if (state === 'fail') return <div className="wrap max-w-lg py-16"><Alert>{msg}</Alert><Button to="/subscribe" className="mt-4">Back</Button></div>;
